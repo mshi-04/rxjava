@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RxJava Samples</string>
+    <string name="run">実行</string>
+    <string name="stop">停止</string>
+    <string name="log_empty">実行するとここにログが出ます</string>
+</resources>
