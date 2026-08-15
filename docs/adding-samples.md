@@ -61,6 +61,17 @@ private static Observable<SampleLogLine> behaviorSubject() {
 Subject は hot なため、合流先が購読を始める前に流れた行が落ちる。
 本流を非同期にすると、この取りこぼしはタイミング次第で再現しなくなる。
 
+## どちらの道具でも表せないとき
+
+`map` の中で `SampleLogLine.onCurrentThread` を直に呼ぶ。
+
+これが要るのは 2 つの場合に限る。
+終端しないストリーム（`interval` など）で `materialize` が意味を持たないとき、
+または値そのものではなく値に付随する状態（破棄件数など）を見せたいとき。
+既存の `intervalWithDisposable` と `flowableBackpressure` がその例。
+
+道具を増やす代わりの逃げ道なので、先に `materialize` か `create` で書けないかを確認する。
+
 ## 2 つのストリームを並べて見せたいとき
 
 同じ元ストリームを条件を変えて 2 回流し、`concatWith` でつなぐ。

@@ -63,6 +63,17 @@ RxJava の記述はすべてこの層に集まる。
 
 `create` が返すのも cold な `Observable` で、購読ごとにブロックを最初から実行する。
 
+### 道具を使わない書き方
+
+サンプル本体が `map` の中で `SampleLogLine.onCurrentThread` を直に呼ぶ形もある。
+`intervalWithDisposable` と `flowableBackpressure` が該当する。
+前者は終端しないため `materialize` が意味を持たず、
+後者はメッセージに破棄件数という値の外にある情報を混ぜる必要がある。
+
+これは道具を増やす代わりの逃げ道であり、
+値そのものではなく値に付随する状態を見せたいときに限る。
+新しいサンプルでは、まず `materialize` か `create` で書けないかを確認する。
+
 ### Subject を立てて合流させない
 
 `PublishSubject` を別に用意して `mergeWith` で本流に合流させる書き方は使わない。

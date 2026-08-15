@@ -65,6 +65,8 @@ com.example.rxjava/
 `data` は 2 系統の変換だけを提供する。
 オペレータの結果を見せる `SampleLogs.materialize` と、
 手続き的に書く `SampleLogs.create` である。
+どちらでも表せないサンプルは `SampleLogLine` を直に組み立てるが、
+それは道具を増やさないための逃げ道であり、既定の書き方ではない。
 `Subject` を立てて `mergeWith` で合流させる書き方は、取りこぼしが出るため使わない。
 
 ## 依存の解決
