@@ -1,6 +1,6 @@
 ---
 name: test-implementation
-description: テストコードを追加・修正する依頼で使う。RxJava Samples の JVM Unit Test（JUnit 4 + TestObserver）を担当する。
+description: テストコードを追加・修正する依頼で使う。RxJava Samples の JVM Unit Test（JUnit Jupiter + TestObserver）を担当する。
 ---
 
 # 目的
@@ -34,7 +34,12 @@ RxJava Samples の変更した振る舞いを、JVM で検証できる範囲で�
 
 # 書き方
 
-- JUnit 4。テストメソッド名は ASCII の英語で、何がどうなるかを平叙文で書く。
+- JUnit Jupiter。`org.junit.jupiter.api.Test` と `org.junit.jupiter.api.Assertions` を使う。
+  JUnit 4 の `org.junit.Test` / `org.junit.Assert` は残っていない。
+- テストクラスとテストメソッドは package-private にする。`public` は付けない。
+- テストメソッド名は ASCII の英語で、何がどうなるかを平叙文で書く。
+- 同じ対象に対する複数の検証は `assertAll` でまとめ、最初の失敗で打ち切らない。
+  要素ごとに同じ検証を繰り返すときは `assertAll(stream.map(...))` を使う。
 - ストリームの検証は `.test()`（`TestObserver`）を使う。
   終了を待つときは `awaitDone(5, TimeUnit.SECONDS)` のように必ず上限を付ける。
 - cold であることを確かめるテストは、購読前後でカウンタが増えないこと・増えることを見る。

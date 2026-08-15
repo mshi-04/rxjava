@@ -10,6 +10,7 @@
 | AGP / Gradle | 9.0.1 / 9.1.0 |
 | compileSdk / targetSdk / minSdk | 36 / 36 / 24 |
 | Rx | RxJava 3.1.12, RxAndroid 3.0.2 |
+| JVM Unit Test | JUnit Jupiter 6.1.3（JUnit Platform） |
 | テーマ | Material 3 (`Theme.Material3.DayNight`) |
 
 採用しないもの: Kotlin、Jetpack Compose、ViewBinding。
@@ -50,6 +51,26 @@ android create empty-activity --name=Probe --output=./probe-tmp
 DataBinding の生成コードが絡む失敗は、原因のレイアウトが
 `app/build/reports/data_binding/` 以下のログに出る。
 Java 側のエラーだけを見ても分からないことが多い。
+
+## ビルドの設定
+
+`gradle.properties` で次を有効にしている。
+
+| 設定 | 効果 |
+| --- | --- |
+| `org.gradle.caching` | ビルドキャッシュ |
+| `org.gradle.configuration-cache` | 設定フェーズの結果を再利用する |
+
+`org.gradle.parallel` は入れない。
+これは独立した project のタスクを並行実行する設定で、
+`:app` の単一モジュール構成では効果がない。
+モジュールを分割するときに合わせて入れる。
+
+ビルドの再現性を疑うときは、この 2 つを外して切り分ける。
+
+```bash
+./gradlew assembleDebug --no-build-cache --no-configuration-cache
+```
 
 ## エミュレータでの実行
 

@@ -23,7 +23,7 @@
 レイアウト 3 枚（`activity_main.xml` / `item_sample.xml` / `activity_sample.xml`）、
 `AndroidManifest.xml`、`strings.xml`、`themes.xml`、Gradle 構成も作成済み。
 
-テストは `app/src/test/` に 3 クラス 15 件。
+テストは `app/src/test/` に 3 クラス 15 件。JUnit Jupiter 6.1.3。
 `InMemorySampleRepositoryTest`（cold 性と defer の検証を含む）、
 `SampleLogsTest`、`SampleCatalogTest`（有限な 2 本のみ実挙動を検証）。
 
