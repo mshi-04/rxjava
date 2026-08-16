@@ -32,7 +32,8 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 - `domain` に Android SDK、RxAndroid、DataBinding、Retrofit、Moshi が入っていないか。
 - `data` に Android SDK、RxAndroid が入っていないか。
 - Retrofit と Moshi の型（`ForecastResponse` など）が `data/remote/` の外へ漏れていないか。
-- 実体の組み立てが `di/ServiceLocator` の外へ漏れていないか。
+- 実体の組み立てが `di/` の Module の外へ漏れていないか。
+- `domain` と `data` のクラスに `@Inject` などの DI アノテーションが付いていないか。
 
 ## ストリームの契約
 
@@ -60,7 +61,8 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 
 ## 責務と状態
 
-- Activity が UseCase や `ServiceLocator` を直接呼んでいないか。domain へのアクセスは ViewModel を通す。
+- Activity が UseCase を直接呼んでいないか。domain へのアクセスは ViewModel を通す。
+- `@AndroidEntryPoint` と `@HiltViewModel` が対で付いているか。
 - Activity に条件分岐・整形・購読が染み出していないか
   （`OnPropertyChangedCallback` での値の橋渡しと、`savedInstanceState` による初回起動判定は例外として許す）。
 - ViewModel に `View` / `Context` が入っていないか。エラー文言を `Context` なしで組み立てようとしていないか。

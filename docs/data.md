@@ -7,7 +7,9 @@
 
 | import してよい | してはならない |
 | --- | --- |
-| `domain`、RxJava 全般、Retrofit、Moshi、OkHttp | Android SDK、RxAndroid、`presentation` |
+| `domain`、RxJava 全般、Retrofit、Moshi、OkHttp | Android SDK、RxAndroid、Hilt、`presentation` |
+
+DI のアノテーションは持たない。組み立ては `di/` の Module が行う。
 
 `AndroidSchedulers` は使わない。表示のためのスレッド移送は `presentation` が付ける。
 
@@ -58,7 +60,7 @@ DTO から `domain` のモデルへ写す。ここが唯一、API の語彙を�
 
 ## 通信の設定
 
-組み立ては `di/ServiceLocator` に置く。
+組み立ては `di/NetworkModule` に置く。
 
 `OkHttpClient` のタイムアウトは接続・読み取りとも 10 秒。
 待ちが長いと、画面が「読み込み中」のまま固まったのか通信しているのか区別できない。
@@ -77,6 +79,6 @@ cold であり、購読するまで通信しない。Scheduler も指定しな�
 ## 変更するとき
 
 API を差し替えるときは `ForecastRepository` の別実装を作り、
-`di/ServiceLocator` の 1 行を変える。`domain` と `presentation` は触らない。
+`di/RepositoryModule` の 1 行を変える。`domain` と `presentation` は触らない。
 
 `remote/` の DTO と Mapper はその実装専用であり、他から参照させない。

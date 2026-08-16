@@ -4,32 +4,40 @@ import androidx.databinding.ObservableBoolean;
 import androidx.databinding.ObservableField;
 import androidx.lifecycle.ViewModel;
 
-import com.example.rxjava.di.ServiceLocator;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.Location;
 import com.example.rxjava.domain.usecase.GetForecastUseCase;
 
 import java.util.List;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.lifecycle.HiltViewModel;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
+@HiltViewModel
 public class ForecastViewModel extends ViewModel {
 
     public final ObservableBoolean loading = new ObservableBoolean(false);
     public final ObservableField<List<DailyForecast>> forecasts = new ObservableField<>();
     public final ObservableBoolean hasError = new ObservableBoolean(false);
 
-    private final GetForecastUseCase getForecast = ServiceLocator.getInstance().getForecastUseCase();
+    private final GetForecastUseCase getForecastUseCase;
 
     private Disposable disposable;
+
+    @Inject
+    public ForecastViewModel(GetForecastUseCase getForecast) {
+        this.getForecastUseCase = getForecast;
+    }
 
     public void load() {
         disposeCurrent();
         hasError.set(false);
         loading.set(true);
-        disposable = getForecast.invoke(Location.TOKYO)
+        disposable = getForecastUseCase.invoke(Location.TOKYO)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(this::handleSuccess, this::handleError);

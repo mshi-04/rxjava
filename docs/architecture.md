@@ -43,14 +43,16 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 | --- | --- | --- |
 | `domain` | `io.reactivex.rxjava3.core`、標準 Java | Android SDK、RxAndroid、Retrofit、Moshi、`data`、`presentation` |
 | `data` | `domain`、RxJava 全般、Retrofit、Moshi、OkHttp | Android SDK、RxAndroid、`presentation` |
-| `presentation` | `domain`、`di`、Android SDK、RxAndroid、DataBinding | `data`、Retrofit、Moshi、OkHttp |
+| `presentation` | `domain`、Android SDK、RxAndroid、DataBinding、Hilt | `data`、Retrofit、Moshi、OkHttp |
+| `di` | すべて | — |
 
 ```
 com.example.rxjava/
+  ForecastApplication
   domain/       model/ repository/ usecase/
   data/         remote/ repository/
   presentation/ activity/ adapter/ viewmodel/ util/
-  di/           ServiceLocator
+  di/           NetworkModule RepositoryModule UseCaseModule
 ```
 
 Retrofit と Moshi の型が `data/remote/` の外へ出たら、それは設計の誤りである。
@@ -85,15 +87,30 @@ API のレスポンス DTO や JSON の項目名は境界の内側に残す。
 
 ## 依存の解決
 
-`di/ServiceLocator` が Repository と UseCase を組み立てる遅延シングルトン。
-ViewModel はここから UseCase を取る。
+Hilt を使う。`di/` の Module が生成手順を宣言し、注入は Hilt が行う。
 
-OkHttp と Retrofit と Moshi の組み立てもここに置く。
-`OkHttpClient` は生成コストが高く接続プールを持つため、シングルトンで 1 つだけ作る。
+| 置き場所 | 内容 |
+| --- | --- |
+| `ForecastApplication` | `@HiltAndroidApp`。コンポーネントの起点 |
+| `di/NetworkModule` | `OkHttpClient`、`Moshi`、`Retrofit`、`ForecastApi` |
+| `di/RepositoryModule` | `ForecastRepository` の実装の選択 |
+| `di/UseCaseModule` | UseCase の組み立て |
 
-依存グラフは Repository 1 つと UseCase 1 つしかなく、
-結線が目で追えることに価値があるため、DI ライブラリは使わない。
-API の実装を差し替えるときは、ここの 1 行を変える。
+`OkHttpClient` は生成コストが高く接続プールを持つため `@Singleton` で 1 つだけ作る。
+API の実装を差し替えるときは `RepositoryModule` の 1 行を変える。
+
+### DI のアノテーションは di と presentation にだけ置く
+
+`domain` と `data` のクラスは `@Inject` を持たない。
+Module 側の `@Provides` が `new` を呼んで組み立てる。
+
+コンストラクタ注入にすれば `@Provides` は減るが、
+`javax.inject` への依存が内側の層へ入る。
+層ごとの import 規則を守るほうを優先し、`@Provides` の記述量は受け入れる。
+UseCase と Repository は各 1 つで、増えても数行で済む。
+
+`presentation` は例外で、`ViewModel` が `@HiltViewModel` と
+コンストラクタの `@Inject` を持つ。Hilt の `ViewModel` 注入がこの形を要求する。
 
 ---
 

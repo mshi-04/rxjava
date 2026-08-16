@@ -45,6 +45,10 @@
   Java 側で文字列を組み立てない。
 - 文字サイズや色を直接書かず、Material 3 の theme 属性（`?attr/textAppearanceTitleMedium` など）を使う。
 - `paddingVertical` / `paddingHorizontal` は API 26 以降のため使わない。個別に書く。
+- 画面のルートには `android:fitsSystemWindows="true"` を付ける。
+  `targetSdk` 35 以上では edge-to-edge が強制され、付けないとステータスバーと
+  先頭の項目が重なる。テーマは `NoActionBar` 系を使い、タイトルはレイアウト内の
+  `TextView` で出す。ActionBar を残すと `android:label` と二重になる。
 - Adapter で binding を使い回すときは、値を差し替えたあとに `executePendingBindings()` を呼ぶ。
   忘れると再利用された行に前の値が残る。
 - 変数の型は完全修飾名で書く。domain の model を渡し、data の型は渡さない。
@@ -63,3 +67,4 @@ DataBinding の失敗は Java 側のエラーだけを見ても分からない�
 - レイアウトが参照している名前と、ViewModel / model が公開しているフィールド名が一致しているか。
 - `<layout>` で包まれていないレイアウトが混ざっていないか。
 - 読み込み中・一覧・失敗のいずれか 2 つ以上が同時に見える組み合わせが `visibility` の式に残っていないか。
+- 画面のルートに `fitsSystemWindows` が付いているか。先頭の項目がステータスバーに隠れていないか。

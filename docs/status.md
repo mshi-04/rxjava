@@ -21,7 +21,8 @@ RxJava のサンプルカタログ機能を全廃した。
 | `data/remote` | `ForecastApi`, `ForecastResponse`, `ForecastMapper` |
 | `data/repository` | `RemoteForecastRepository` |
 | `presentation` | `activity/ForecastActivity`, `viewmodel/ForecastViewModel`, `adapter/ForecastAdapter`, `util/ForecastFormatter` |
-| `di` | `ServiceLocator` |
+| ルート | `ForecastApplication`（`@HiltAndroidApp`） |
+| `di` | `NetworkModule`, `RepositoryModule`, `UseCaseModule` |
 
 レイアウト 2 枚（`activity_forecast.xml` / `item_forecast.xml`）、
 `AndroidManifest.xml`（`INTERNET` 権限）、`strings.xml`、`themes.xml`、Gradle 構成。
@@ -38,17 +39,42 @@ RxJava のサンプルカタログ機能を全廃した。
 | 7Timer! API の応答 | `civillight` で東京の 7 日分が返ることを確認済み。認証・キーは不要 |
 | 層の境界 | `domain` と `data` に `android.*` / `androidx.*` の import がないことを確認 |
 
+## エミュレータで検証済み
+
+Pixel_10（API 37.1）で確認した。
+
+| 事項 | 結果 |
+| --- | --- |
+| 起動と表示 | 東京の 7 日予報が表示される。API の値と一致 |
+| Hilt の注入 | `@AndroidEntryPoint` と `@HiltViewModel` が実行時に結線される |
+| 失敗状態 | 通信断で「天気予報を取得できませんでした」と再試行ボタンが出る |
+| 再試行 | 通信を戻して再試行を押すと一覧が出る |
+| 画面回転で再通信しないか | 通信断のまま回転しても一覧が残る。再取得していない |
+| 回転後の一覧保持 | 一度空になる不具合を修正済み（下記） |
+| レイアウトの余白 | 先頭の項目がシステムバーと重なる不具合を修正済み（下記） |
+| ダーク / ライト | ライトで確認。ダークは未確認 |
+| DataBinding の書式と `ForecastFormatter` | 日付・気温・風速・天気ラベルすべて表示される |
+
+### 見つけて直した不具合
+
+**その 1: 先頭の項目がシステムバーと重なっていた。**
+`targetSdk` 36 で edge-to-edge が強制され、コンテンツがシステムバーの裏から
+描画されていた。さらに ActionBar の `android:label` と画面内のタイトルが二重に出ていた。
+テーマを `NoActionBar` にし、ルートへ `fitsSystemWindows` を付け、
+`windowLightStatusBar` を明暗で出し分けるようにした。
+
+**その 2: 回転すると一覧が消えていた。**
+`OnPropertyChangedCallback` は値が変わったときにしか発火しないが、
+回転では ViewModel が値を保持したままなので変更が起きず、
+作り直された Adapter へ何も届いていなかった。
+
+登録直後に現在値を流し込むようにし、あわせて `onDestroy()` で解除するようにした。
+解除しないと古い Adapter への参照が回転のたびに積み上がる。
+
 ## 未検証
 
-実機・エミュレータでの確認をしていない。
-
-- アプリが起動して予報が表示されるか
-- 読み込み中・成功・失敗の 3 状態が意図どおり出し分けられるか
-- 通信断のときに再試行ボタンで取り直せるか
-- 画面回転で再通信が走らないか（`savedInstanceState` のガードが効いているか）
-- DataBinding の `@string/name(args)` 形式と、暗黙の `context` を使った
-  `ForecastFormatter` の解決が実機で動くか
 - `release` ビルド（`assembleRelease`）。R8 と Moshi のリフレクションの相性は未確認
+- 読み込み中の進捗表示。通信が速く、画面で捉えられていない
 
 ## 次の一手
 

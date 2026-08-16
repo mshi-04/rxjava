@@ -6,7 +6,7 @@
 
 - `presentation/viewmodel/ForecastViewModel`
 - 対応する `activity_forecast.xml` の binding 式
-- `di/ServiceLocator` の UseCase 取得口
+- `di/UseCaseModule` の `@Provides`
 
 ## 実装時の注意
 
@@ -22,8 +22,9 @@
   `getString(...)` を呼べない。代わりに `hasError` の真偽だけを公開し、実際の文言は
   `strings.xml`（`forecast_error_message`）からレイアウト側が解決する。例外の `getMessage()` を
   そのまま状態に載せない。読み手に意味がなく、端末の言語設定とも無関係な英文が出る。
-- UseCase は `ServiceLocator` から取る。コンストラクタ引数を持たせない。
-  持たせると `ViewModelProvider.Factory` の実装が要る。
+- UseCase は Hilt が注入する。`@HiltViewModel` を付け、コンストラクタに `@Inject` を書く。
+  `ViewModelProvider.Factory` は書かない。Hilt が生成する。
+  Activity 側の `@AndroidEntryPoint` を忘れると実行時に落ちる。
 - フィールド名とメソッド名を衝突させない。`load()` メソッドと `ObservableField<...> load` が
   同居すると `@{viewModel.load}` の解決先が曖昧になる。
 - 資源を持つ ViewModel は `onCleared()` で必ず解放する。`ForecastViewModel` が持つ購読については
@@ -32,7 +33,7 @@
 ## テスト判断
 
 - Android に依存しない判断（状態遷移の条件）を持たせたときは JVM Unit Test を足す。
-- `ObservableField` / `ObservableBoolean` と `ServiceLocator`、`AndroidSchedulers.mainThread()` に
+- `ObservableField` / `ObservableBoolean` と `AndroidSchedulers.mainThread()` に
   触れる経路は JVM では検証しにくいため、エミュレータでの確認に回す。
 
 ## 検証観点

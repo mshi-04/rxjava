@@ -6,10 +6,10 @@ MVVM で組む。View はレイアウトを束ねるだけで、状態と処理�
 
 | import してよい | してはならない |
 | --- | --- |
-| `domain`、`di`、Android SDK、RxAndroid、DataBinding | `data`、Retrofit、Moshi、OkHttp |
+| `domain`、Android SDK、RxAndroid、DataBinding、Hilt | `data`、Retrofit、Moshi、OkHttp |
 
 `presentation` が `data` のクラス名を書いたら設計の誤りである。
-実体の組み立ては `di/ServiceLocator` に閉じる。
+実体の組み立ては `di/` の Module に閉じる。
 
 ## クラス
 
@@ -49,8 +49,9 @@ DataBinding の式から直接読ませる。`LiveData` は使わない。
 ライフサイクル連動の恩恵はあるが、実行中に画面を離れる想定がなく、
 購読時にメインスレッドへ移送済みのため二重の仕組みになる。
 
-UseCase は `ServiceLocator` から取る。コンストラクタ引数を持たせないことで
-`ViewModelProvider.Factory` の実装が不要になる。
+UseCase は Hilt が注入する。`@HiltViewModel` を付け、コンストラクタに `@Inject` を書く。
+`ViewModelProvider.Factory` は書かない。Hilt が生成する。
+Activity 側には `@AndroidEntryPoint` が要る。付け忘れると実行時に落ちる。
 
 フィールド名とメソッド名を衝突させない。
 同名の `ObservableField` とメソッドが同居すると、binding 式の解決先が曖昧になる。
@@ -113,6 +114,23 @@ getForecast.invoke(Location.TOKYO)
 `ForecastFormatter` は `Context` を受け取らず `@StringRes int` を返すだけにして、
 日本語のラベルが `strings.xml` の外へ出ないようにする。
 
+## 画面の余白とシステムバー
+
+`targetSdk` が 35 以上のため edge-to-edge が強制され、
+コンテンツはシステムバーの裏から描画される。
+何もしないとステータスバーと先頭の項目が重なる。
+
+| 対処 | 場所 |
+| --- | --- |
+| ルートに `android:fitsSystemWindows="true"` | 各画面のレイアウト |
+| テーマは `NoActionBar` 系 | `themes.xml` |
+| `android:windowLightStatusBar` を明暗で出し分け | `values/themes.xml` と `values-night/themes.xml` |
+
+ActionBar は使わない。画面のタイトルはレイアウト内の `TextView` で出す。
+ActionBar を残すと `android:label` と画面内のタイトルが二重に出る。
+
+`windowLightStatusBar` を出し分けないと、明るい背景に白いアイコンが乗って読めなくなる。
+
 ## DataBinding
 
 | レイアウト | 受け取る変数 |
@@ -126,6 +144,16 @@ getForecast.invoke(Location.TOKYO)
 
 `ForecastAdapter` は binding を使い回すため、
 値を差し替えたあとに `executePendingBindings()` を呼ぶ。
+
+一覧の反映は `ObservableField` の `OnPropertyChangedCallback` で受ける。
+DataBinding は `List` を `RecyclerView` へ直接流せないため、この橋渡しが要る。
+
+**登録直後に現在値を自分で流すこと。** コールバックは値が変わったときにしか発火しない。
+画面回転で Activity だけが作り直されたとき、ViewModel は値を保持済みで変更が起きないため、
+新しい Adapter へ何も届かず一覧が空になる。
+
+コールバックは `onDestroy()` で解除する。ViewModel は Activity より長生きするので、
+解除しないと回転のたびに古い Adapter への参照が積み上がる。
 
 一覧の差し替えは `notifyDataSetChanged()` で足りる。
 7 件の全面差し替えしか起きないため、`DiffUtil` は要らない。

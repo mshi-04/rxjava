@@ -5,7 +5,7 @@
 ## 確認する対象
 
 - `data/remote/ForecastApi` の現在のメソッドと `@GET` のパス
-- `di/ServiceLocator` の `createForecastApi()`（`OkHttpClient` とタイムアウト、Retrofit の組み立て）
+- `di/NetworkModule`（`OkHttpClient` とタイムアウト、Retrofit と Moshi の組み立て）
 
 ## 実装時の注意
 
@@ -15,9 +15,9 @@
   この DTO を `remote/` の外（Repository 実装より上）へそのまま渡さない。写像は `ForecastMapper` の仕事。
 - `RxJava3CallAdapterFactory` は `create()` を使う。`createAsync()` は独自にスレッドを起こし、
   presentation が付けた `subscribeOn` の効果が見えなくなるため使わない。
-- `OkHttpClient` の接続・読み取りタイムアウトは 10 秒に揃える（`di/ServiceLocator` で設定）。
+- `OkHttpClient` の接続・読み取りタイムアウトは 10 秒に揃える（`di/NetworkModule` で設定）。
   待ちが長いと、画面が「読み込み中」のまま固まったのか通信しているのか区別できなくなる。
-- `OkHttpClient` は生成コストが高く接続プールを持つため、`di/ServiceLocator` でシングルトンとして 1 つだけ作る。
+- `OkHttpClient` は生成コストが高く接続プールを持つため、`di/NetworkModule` で `@Singleton` として 1 つだけ作る。
   新しい API 呼び出しを増やすときも、この `OkHttpClient` と `Retrofit` インスタンスを使い回す。
 
 ## テスト判断

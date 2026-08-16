@@ -17,33 +17,54 @@ import com.example.rxjava.presentation.viewmodel.ForecastViewModel;
 
 import java.util.List;
 
+import dagger.hilt.android.AndroidEntryPoint;
+
+@AndroidEntryPoint
 public class ForecastActivity extends AppCompatActivity {
+
+    private final ForecastAdapter adapter = new ForecastAdapter();
+
+    private ForecastViewModel viewModel;
+    private Observable.OnPropertyChangedCallback forecastsCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ActivityForecastBinding binding = DataBindingUtil.setContentView(this, R.layout.activity_forecast);
-        ForecastViewModel viewModel = new ViewModelProvider(this).get(ForecastViewModel.class);
+        viewModel = new ViewModelProvider(this).get(ForecastViewModel.class);
         binding.setViewModel(viewModel);
 
-        ForecastAdapter adapter = new ForecastAdapter();
         binding.forecastList.setLayoutManager(new LinearLayoutManager(this));
         binding.forecastList.addItemDecoration(
                 new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
         binding.forecastList.setAdapter(adapter);
 
-        viewModel.forecasts.addOnPropertyChangedCallback(new Observable.OnPropertyChangedCallback() {
+        forecastsCallback = new Observable.OnPropertyChangedCallback() {
             @Override
             public void onPropertyChanged(Observable sender, int propertyId) {
-                List<DailyForecast> result = viewModel.forecasts.get();
-                if (result != null) {
-                    adapter.submit(result);
-                }
+                submitForecasts();
             }
-        });
+        };
+        viewModel.forecasts.addOnPropertyChangedCallback(forecastsCallback);
+        // 回転後は ViewModel が値を保持済みで変更通知が来ないため、登録直後に現在値を流す
+        submitForecasts();
 
         if (savedInstanceState == null) {
             viewModel.load();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        viewModel.forecasts.removeOnPropertyChangedCallback(forecastsCallback);
+        super.onDestroy();
+    }
+
+    private void submitForecasts() {
+        List<DailyForecast> result = viewModel.forecasts.get();
+        if (result == null) {
+            return;
+        }
+        adapter.submit(result);
     }
 }

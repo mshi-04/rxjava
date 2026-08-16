@@ -11,6 +11,7 @@
 | compileSdk / targetSdk / minSdk | 36 / 36 / 24 |
 | Rx | RxJava 3.1.12, RxAndroid 3.0.2 |
 | 通信 | Retrofit 3.0.0, Moshi 1.15.2, OkHttp（Retrofit 経由） |
+| DI | Hilt 2.60.1（Java なので annotationProcessor。KSP は使わない） |
 | JVM Unit Test | JUnit Jupiter 6.1.3（JUnit Platform） |
 | テーマ | Material 3 (`Theme.Material3.DayNight`) |
 

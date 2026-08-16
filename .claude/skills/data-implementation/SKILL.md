@@ -13,7 +13,7 @@ description: 7Timer! API との通信、DTO と写像、Repository 実装を変�
 - [`docs/architecture.md`](../../../docs/architecture.md)
 - [`docs/data.md`](../../../docs/data.md)
 - [`app/src/main/java/com/example/rxjava/data/`](../../../app/src/main/java/com/example/rxjava/data/)
-- [`app/src/main/java/com/example/rxjava/di/ServiceLocator.java`](../../../app/src/main/java/com/example/rxjava/di/ServiceLocator.java)（通信の組み立て）
+- [`app/src/main/java/com/example/rxjava/di/`](../../../app/src/main/java/com/example/rxjava/di/)（通信の組み立て）
 - 関連する [`app/src/test/java/com/example/rxjava/data/`](../../../app/src/test/java/com/example/rxjava/data/)
 
 # 役割クラスと参照先

@@ -40,7 +40,7 @@ description: 画面の表示、操作、遷移、表示文言を変える依頼�
 
 # 注意事項
 
-- `presentation` から `data` のクラスを直接参照しない。実体の組み立ては `di/ServiceLocator` に閉じる。
+- `presentation` から `data` のクラスを直接参照しない。実体の組み立ては `di/` の Module に閉じる。
 - ViewModel に `View`、`Context`、`Activity` を持ち込まない。表示文言を `strings.xml` の ID
   （`@StringRes int`）で公開し、レイアウト側の暗黙の `context` で解決する形にする。
 - `findViewById` と `setOnClickListener` を使わない。押下はレイアウト側で ViewModel へ束ねる。

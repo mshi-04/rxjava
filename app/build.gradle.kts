@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.hilt)
 }
 
 android {
@@ -49,6 +50,9 @@ dependencies {
     implementation(libs.retrofit.adapter.rxjava3)
     implementation(libs.retrofit.converter.moshi)
     implementation(libs.moshi)
+
+    implementation(libs.hilt.android)
+    annotationProcessor(libs.hilt.compiler)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

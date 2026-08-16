@@ -1,7 +1,7 @@
 # 購読と Scheduler
 
 UseCase が返す cold な `Single` を購読し、破棄まで面倒を見る。
-ViewModel 一般の規則（状態の公開、命名、`ServiceLocator` の使い方）は `viewmodel.md` を見る。
+ViewModel 一般の規則（状態の公開、命名、Hilt による注入）は `viewmodel.md` を見る。
 ここは購読の扱いだけを扱う。
 
 ## 確認する対象
