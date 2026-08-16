@@ -6,7 +6,7 @@
 
 - `presentation/viewmodel/ForecastViewModel`
 - 対応する `activity_forecast.xml` の binding 式
-- `di/UseCaseModule` の `@Provides`
+- `di/` の Module と、UseCase のコンストラクタ注入
 
 ## 実装時の注意
 

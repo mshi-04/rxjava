@@ -6,7 +6,7 @@
 
 | import してよい | してはならない |
 | --- | --- |
-| `io.reactivex.rxjava3.core`、標準 Java | Android SDK、RxAndroid、Retrofit、Moshi、`data`、`presentation` |
+| `io.reactivex.rxjava3.core`、`javax.inject`、標準 Java | Android SDK、RxAndroid、Retrofit、Moshi、`data`、`presentation` |
 
 RxJava core だけは例外的に許す。
 予報の取得は待ちを伴う操作であり、`Single` という型はこの層の語彙に属する。
@@ -82,6 +82,8 @@ cold であり、購読するまで通信しない。Scheduler も指定しな�
 ## GetForecastUseCase
 
 1 つの操作につき 1 クラス、公開メソッドは `invoke` のみ。
+
+コンストラクタで `ForecastRepository` を受け取り、`@Inject` を付けて Hilt に組み立てさせる。
 
 現状は Repository への委譲 1 行しか持たない。
 それでも置くのは、`presentation` が Repository のインタフェースへ直接依存すると、

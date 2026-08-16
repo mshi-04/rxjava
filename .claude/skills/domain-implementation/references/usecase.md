@@ -12,8 +12,8 @@
 
 - 1 つの UseCase は 1 つの明確な操作を表す。
 - 公開メソッドは `invoke` だけにする。名前で操作を表し、引数で対象を表す。
-- コンストラクタで `ForecastRepository` を受け取る。DI のアノテーションは付けない。
-  組み立ては `di/UseCaseModule` の `@Provides` が行う。
+- コンストラクタで `ForecastRepository` を受け取り、`@Inject` を付ける。
+  Hilt がコンストラクタ注入で組み立てるため、Module へ書き足す必要はない。
 - 戻り値は `Single<List<DailyForecast>>` のまま、cold で返す。`subscribeOn` / `observeOn` を付けない。
   Scheduler の指定は presentation に限る。
 - 失敗はそのまま `onError` として通す。空リストや `null` へ潰さない。

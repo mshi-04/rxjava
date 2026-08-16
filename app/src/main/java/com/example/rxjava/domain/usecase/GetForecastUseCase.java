@@ -6,12 +6,15 @@ import com.example.rxjava.domain.repository.ForecastRepository;
 
 import java.util.List;
 
+import javax.inject.Inject;
+
 import io.reactivex.rxjava3.core.Single;
 
 public final class GetForecastUseCase {
 
     private final ForecastRepository repository;
 
+    @Inject
     public GetForecastUseCase(ForecastRepository repository) {
         this.repository = repository;
     }

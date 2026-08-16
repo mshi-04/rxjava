@@ -7,9 +7,11 @@
 
 | import してよい | してはならない |
 | --- | --- |
-| `domain`、RxJava 全般、Retrofit、Moshi、OkHttp | Android SDK、RxAndroid、Hilt、`presentation` |
+| `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp | Android SDK、RxAndroid、Hilt 固有の型、`presentation` |
 
-DI のアノテーションは持たない。組み立ては `di/` の Module が行う。
+Repository 実装はコンストラクタに `@Inject` を付ける。
+インタフェースとの対応は `di/RepositoryModule` の `@Binds` が結ぶ。
+`@Module` や `@Provides` のような Hilt 固有の型はこの層に書かない。
 
 `AndroidSchedulers` は使わない。表示のためのスレッド移送は `presentation` が付ける。
 

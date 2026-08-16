@@ -22,7 +22,7 @@ RxJava のサンプルカタログ機能を全廃した。
 | `data/repository` | `RemoteForecastRepository` |
 | `presentation` | `activity/ForecastActivity`, `viewmodel/ForecastViewModel`, `adapter/ForecastAdapter`, `util/ForecastFormatter` |
 | ルート | `ForecastApplication`（`@HiltAndroidApp`） |
-| `di` | `NetworkModule`, `RepositoryModule`, `UseCaseModule` |
+| `di` | `NetworkModule`, `RepositoryModule` |
 
 レイアウト 2 枚（`activity_forecast.xml` / `item_forecast.xml`）、
 `AndroidManifest.xml`（`INTERNET` 権限）、`strings.xml`、`themes.xml`、Gradle 構成。
@@ -53,6 +53,7 @@ Pixel_10（API 37.1）で確認した。
 | 回転後の一覧保持 | 一度空になる不具合を修正済み（下記） |
 | レイアウトの余白 | 先頭の項目がシステムバーと重なる不具合を修正済み（下記） |
 | ダーク / ライト | ライトで確認。ダークは未確認 |
+| 読み込み中の表示 | 起動直後に `ProgressBar` が出ることを確認。消えるタイミングは未確認 |
 | DataBinding の書式と `ForecastFormatter` | 日付・気温・風速・天気ラベルすべて表示される |
 
 ### 見つけて直した不具合
@@ -74,9 +75,12 @@ Pixel_10（API 37.1）で確認した。
 ## 未検証
 
 - `release` ビルド（`assembleRelease`）。R8 と Moshi のリフレクションの相性は未確認
-- 読み込み中の進捗表示。通信が速く、画面で捉えられていない
+- 読み込み中の表示が消えるタイミング。成功・失敗のどちらの経路でも `loading` が
+  戻る実装になっているが、画面では確認していない。回線を絞れば捉えられる
+- ダークテーマの表示。`windowLightStatusBar` を `values-night/` で出し分けたが未確認
 
 ## 次の一手
 
-1. エミュレータで起動し、上の「未検証」を潰す
-2. 潰れたところでコミットする
+1. 回線を絞って読み込み中の表示が消えることを確認する
+2. ダークテーマで表示を確認する
+3. `assembleRelease` を通す

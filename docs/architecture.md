@@ -41,8 +41,8 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 
 | 層 | import してよい | してはならない |
 | --- | --- | --- |
-| `domain` | `io.reactivex.rxjava3.core`、標準 Java | Android SDK、RxAndroid、Retrofit、Moshi、`data`、`presentation` |
-| `data` | `domain`、RxJava 全般、Retrofit、Moshi、OkHttp | Android SDK、RxAndroid、`presentation` |
+| `domain` | `io.reactivex.rxjava3.core`、`javax.inject`、標準 Java | Android SDK、RxAndroid、Retrofit、Moshi、`data`、`presentation` |
+| `data` | `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp | Android SDK、RxAndroid、`presentation` |
 | `presentation` | `domain`、Android SDK、RxAndroid、DataBinding、Hilt | `data`、Retrofit、Moshi、OkHttp |
 | `di` | すべて | — |
 
@@ -52,7 +52,7 @@ com.example.rxjava/
   domain/       model/ repository/ usecase/
   data/         remote/ repository/
   presentation/ activity/ adapter/ viewmodel/ util/
-  di/           NetworkModule RepositoryModule UseCaseModule
+  di/           NetworkModule RepositoryModule
 ```
 
 Retrofit と Moshi の型が `data/remote/` の外へ出たら、それは設計の誤りである。
@@ -94,23 +94,23 @@ Hilt を使う。`di/` の Module が生成手順を宣言し、注入は Hilt �
 | `ForecastApplication` | `@HiltAndroidApp`。コンポーネントの起点 |
 | `di/NetworkModule` | `OkHttpClient`、`Moshi`、`Retrofit`、`ForecastApi` |
 | `di/RepositoryModule` | `ForecastRepository` の実装の選択 |
-| `di/UseCaseModule` | UseCase の組み立て |
 
 `OkHttpClient` は生成コストが高く接続プールを持つため `@Singleton` で 1 つだけ作る。
 API の実装を差し替えるときは `RepositoryModule` の 1 行を変える。
 
-### DI のアノテーションは di と presentation にだけ置く
+### コンストラクタ注入を使う
 
-`domain` と `data` のクラスは `@Inject` を持たない。
-Module 側の `@Provides` が `new` を呼んで組み立てる。
+自分たちが書いたクラスは、コンストラクタに `@Inject` を付けて Hilt に組み立てさせる。
+`RemoteForecastRepository`、`GetForecastUseCase`、`ForecastViewModel` が該当する。
 
-コンストラクタ注入にすれば `@Provides` は減るが、
-`javax.inject` への依存が内側の層へ入る。
-層ごとの import 規則を守るほうを優先し、`@Provides` の記述量は受け入れる。
-UseCase と Repository は各 1 つで、増えても数行で済む。
+インタフェースと実装の対応は `RepositoryModule` の `@Binds` で結ぶ。
+`@Binds` は abstract メソッドの宣言だけで済み、`@Provides` より生成コードが小さい。
 
-`presentation` は例外で、`ViewModel` が `@HiltViewModel` と
-コンストラクタの `@Inject` を持つ。Hilt の `ViewModel` 注入がこの形を要求する。
+`@Provides` が要るのは自分で `new` できない他社製の型だけで、
+`OkHttpClient`・`Moshi`・`Retrofit`・`ForecastApi` を組み立てる `NetworkModule` がそれにあたる。
+
+`javax.inject` は JSR-330 の標準アノテーションで、Dagger の実行時にも Android にも依存しない。
+層を守る目的は Android と Retrofit を内側へ入れないことなので、ここには抵触しない。
 
 ---
 

@@ -33,7 +33,9 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 - `data` に Android SDK、RxAndroid が入っていないか。
 - Retrofit と Moshi の型（`ForecastResponse` など）が `data/remote/` の外へ漏れていないか。
 - 実体の組み立てが `di/` の Module の外へ漏れていないか。
-- `domain` と `data` のクラスに `@Inject` などの DI アノテーションが付いていないか。
+- 自作クラスがコンストラクタ注入になっているか。`@Provides` で `new` を書いていないか。
+- インタフェースと実装の対応が `@Binds` で結ばれているか。
+- `domain` と `data` に `@Module` や `@Provides` のような Hilt 固有の型が入っていないか。
 
 ## ストリームの契約
 
