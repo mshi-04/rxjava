@@ -1,17 +1,16 @@
 # domain 層
 
-アプリの語彙を定義する最内層。何が「サンプル」で、何が「ログ 1 行」かをここで決める。
+アプリの語彙を定義する最内層。何が「予報」で、何が「気温」かをここで決める。
 
 ## 依存
 
 | import してよい | してはならない |
 | --- | --- |
-| `io.reactivex.rxjava3.core`、標準 Java | Android SDK、RxAndroid、`data`、`presentation` |
+| `io.reactivex.rxjava3.core`、標準 Java | Android SDK、RxAndroid、Retrofit、Moshi、`data`、`presentation` |
 
 RxJava core だけは例外的に許す。
-このアプリの題材が RxJava そのものであり、
-「ログの列が時間をかけて流れてくる」という概念が語彙の一部だからである。
-ここを自前の抽象で包むと、RxJava を包み直すインタフェースが増え、観察対象が層の下に埋まる。
+予報の取得は待ちを伴う操作であり、`Single` という型はこの層の語彙に属する。
+ここを自前の抽象で包むと、RxJava を包み直すインタフェースが増えるだけになる。
 
 RxAndroid は入れない。Scheduler の指定は domain の関心事ではない。
 
@@ -19,60 +18,77 @@ RxAndroid は入れない。Scheduler の指定は domain の関心事ではな�
 
 | クラス | 役割 |
 | --- | --- |
-| `model/SampleId` | サンプルの識別子。値オブジェクト |
-| `model/Sample` | タイトルと説明を持つエンティティ |
-| `model/SampleLogLine` | スレッド名とメッセージを持つログ 1 行 |
-| `repository/SampleRepository` | サンプルの取得と実行の契約 |
-| `usecase/GetSampleListUseCase` | 一覧を返す |
-| `usecase/GetSampleUseCase` | 1 件を返す |
-| `usecase/RunSampleUseCase` | 実行のログストリームを返す |
+| `model/Location` | 緯度経度。`TOKYO` を定数で持つ |
+| `model/ForecastDate` | 年月日。書式は持たない |
+| `model/Temperature` | 摂氏の気温 |
+| `model/TemperatureRange` | 最高と最低の組 |
+| `model/WindSpeed` | 風速階級 |
+| `model/WeatherCondition` | 天気の区分。未知のコード用に `UNKNOWN` を持つ |
+| `model/DailyForecast` | 1 日分の予報 |
+| `repository/ForecastRepository` | 予報の取得の契約 |
+| `usecase/GetForecastUseCase` | 指定した地点の予報を返す |
 
-## SampleId
+## 値オブジェクト
 
-`String` を包んだ値オブジェクト。`equals` と `hashCode` を持ち、`Map` のキーになる。
+生の `int` や `String` を層をまたいで運ばない。
+`DailyForecast` が持つのは `int` ではなく `Temperature` と `WindSpeed` である。
 
-画面遷移で `Intent` に載る識別子でもあるため、一度公開した値は変えない。
-一覧の並び順や添字に依存しない文字列を使う。
+| 型 | 不変条件 |
+| --- | --- |
+| `Temperature` | 摂氏 -100〜100 |
+| `TemperatureRange` | 最高が最低を下回らない |
+| `WindSpeed` | 階級 0〜12 |
+| `ForecastDate` | 月 1〜12、日 1〜31 |
+| `Location` | 緯度 -90〜90、経度 -180〜180 |
 
-## Sample
+`Temperature` と `WindSpeed` の範囲は API の契約そのものではなく、
+値が壊れていることを検知するための下限・上限である。
+API は気温 -76〜60、風速階級 1〜8 を返すと文書化しているが、
+そこに合わせて厳しく縛ると、API 側の小さな変更でアプリ全体が落ちる。
 
-タイトルと説明だけを持ち、**実行手段を持たない**。
+書き方は共通で、`private` コンストラクタと `static` ファクトリ、
+入口での早期リターンによる検査、`equals` を必要とする型だけ `equals` と `hashCode` を持つ。
 
-サンプルの中身は `data` 層の関心事であり、
-`presentation` が一覧を描くのに必要なのは表示用の文字列と識別子だけである。
-`Sample` に実行関数を持たせると、一覧を組み立てるだけで
-全サンプルの実装が `presentation` から見えてしまう。
+### 表示形式を持たせない
 
-## SampleLogLine
+`ForecastDate` は年月日の整数 3 つだけを持ち、書式を知らない。
+`WeatherCondition` は enum で、日本語のラベルを持たない。
+`Temperature` は摂氏の数値を持つが、`℃` という記号は持たない。
 
-生成時のスレッド名を自分で確定させる。
-これが放出と同じスレッドで起きるため、スレッド名は自然に正しくなる。
+いずれも `presentation` が `strings.xml` と組み合わせて組み立てる。
 
-コールバックで受けてから別スレッドへ渡す設計だと、
-どこで名前を確定させるかを毎回意識する必要があり、間違えると全行が `main` になる。
-このアプリでは `subscribeOn` / `observeOn` の効果がスレッド名にしか現れないので、
-そこが崩れると目的そのものが失われる。
+`java.time` を使わないのは `minSdk = 24` のためで、
+core library desugaring を足す価値がこの用途にはない。
 
-表示用の整形はしない。`[スレッド名] メッセージ` の組み立ては `presentation` の仕事。
+## WeatherCondition
 
-## SampleRepository
+API が返す `"lightrain"` のような文字列コードは持たない。
+コードから enum への写像は `data` の責務である。
+
+未知のコードは `UNKNOWN` に落とし、通信そのものは成功として扱う。
+API が値を増やしたときにアプリが落ちるより、その日だけ天気が不明になる方がよい。
+
+## ForecastRepository
 
 インタフェースを **domain が所有** し、`data` が実装する。
-これで依存が内向きに反転し、`domain` はサンプルの出所を知らずに済む。
+これで依存が内向きに反転し、`domain` は予報の出所を知らずに済む。
 
-`run(SampleId)` が返すのは cold な `Observable<SampleLogLine>` で、
-購読するまで何も起きない。Scheduler の指定もしない。
+`Single<List<DailyForecast>> find(Location location)` を返す。
 
-## UseCase
+cold であり、購読するまで通信しない。Scheduler も指定しない。
+通信の失敗は `onError` として上げ、空リストや `null` に潰さない。
+潰すと、待っている状態と失敗した状態が画面から区別できなくなる。
+
+## GetForecastUseCase
 
 1 つの操作につき 1 クラス、公開メソッドは `invoke` のみ。
 
-現状は 3 つとも Repository への委譲 1 行しか持たない。
+現状は Repository への委譲 1 行しか持たない。
 それでも置くのは、`presentation` が Repository のインタフェースへ直接依存すると、
-サンプルの絞り込みや並べ替えといった規則の置き場が `presentation` へ流れるためである。
+地点の既定値や取得の再試行といった規則の置き場が `presentation` へ流れるためである。
 
 ## 変更するとき
 
 エンティティを増やす前に、それが本当にアプリの語彙かを確認する。
 表示のための値（整形済み文字列、色、アイコン）は `presentation` に置く。
-サンプルの実装都合の値は `data` に置く。
+API の都合の値は `data` に置く。

@@ -1,27 +1,34 @@
 # Value object
 
-識別子や制約つきの値を型で表し、生の `String` を層をまたいで運ばない。
+生の `int` や `String` を層をまたいで運ばず、不変条件を生成時に検査した型に閉じる。
 
 ## 確認する対象
 
-- `domain/model/SampleId` の実装と、`equals` / `hashCode` / `value()` の形
-- その値を `Map` のキーや `Intent` の extra として使っている箇所
+- `domain/model/` の `Temperature`, `TemperatureRange`, `WindSpeed`, `ForecastDate`, `Location`
+- それぞれを生成している `data/remote/ForecastMapper` と、`Location.TOKYO` を使う `di/ServiceLocator` / `presentation/forecast/ForecastViewModel`
 
 ## 実装時の注意
 
-- `private` コンストラクタと `static of(...)` を組み合わせ、生成経路を 1 つにする。
-- `null` は `Objects.requireNonNull` で入口で弾く。
-- `equals` と `hashCode` を必ず対で実装する。`Map` のキーになるため片方だけでは壊れる。
-- `toString` は値そのものを返す。ログや例外メッセージで読めることを優先する。
-- 表示用の整形を持たせない。整形は presentation の仕事。
-- 一度公開した値は変えない。画面遷移で運ばれる識別子は永続的な契約になる。
+- `private` コンストラクタと `static` ファクトリ（`of` / `ofCelsius` / `ofLevel`）を組み合わせ、生成経路を 1 つにする。
+- 検査は入口の早期リターンで書き、不正な値は `IllegalArgumentException` で即座に止める。正常系を分岐の外に出す。
+- 数値の上限・下限は API が文書化している範囲そのものではなく、壊れたデータを検知するための緩めの境界にする。
+  API の公称範囲に厳しく合わせると、API 側の小さな変更でアプリ全体が落ちる。
+  例えば `Temperature` は摂氏 -100〜100、`WindSpeed` は階級 0〜12 とし、
+  API が文書化している気温 -76〜60、風速階級 1〜8 よりわざと広く取る。
+- `TemperatureRange` のように複数の値を組み合わせる型は、組み合わせ自体の不変条件
+  （最高が最低を下回らない）をファクトリで検査する。単体の値の検査は組み合わせ先の型に重複させない。
+- `equals` / `hashCode` は、`Map` のキーにする・コレクションで重複排除する・テストで値による比較をするなど、
+  必要になった型にだけ追加する。ないからといって機械的に足さない。
+- 表示形式を持たせない。`ForecastDate` は年月日の整数だけを持ち書式を知らない。
+  `Temperature` は摂氏の数値だけを持ち `℃` の記号を持たない。整形は presentation が `strings.xml` と組み合わせて行う。
 
 ## テスト判断
 
-- 同値性（同じ値なら `equals` が真、`hashCode` が一致）を JVM Unit Test で押さえる。
-- `null` を渡したときに例外になることを確認する。
+- 生成の成功・境界値・失敗（範囲外で例外になること）を JVM Unit Test で押さえる。
+- `equals` / `hashCode` を実装した型は同値性のテストも足す。
 
 ## 検証観点
 
-- 生の `String` のまま受け渡している箇所が残っていないか。
-- 値の妥当性検査が呼び出し側に散っていないか。
+- 生の `int` や `String` のまま受け渡している箇所が残っていないか。
+- 値の妥当性検査が呼び出し側（`ForecastMapper` など）に散っていないか。
+- 境界値が API の公称範囲そのものになっていないか（意図的に緩めているか）。

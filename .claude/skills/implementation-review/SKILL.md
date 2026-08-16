@@ -1,11 +1,11 @@
 ---
 name: implementation-review
-description: 実装差分をレビューする依頼で使う。RxJava Samples の依存方向、層の責務、ストリームの cold 性、購読の破棄、テスト不足を確認して指摘する。
+description: 実装差分をレビューする依頼で使う。東京の天気の依存方向、層の責務、ストリームの cold 性、購読の破棄、テスト不足を確認して指摘する。
 ---
 
 # 目的
 
-RxJava Samples の差分が既存方針に沿っているかを確認し、
+東京の天気の差分が既存方針に沿っているかを確認し、
 コミット前に直すべき問題を具体的に洗い出す。
 
 # 最初に確認するもの
@@ -29,46 +29,55 @@ RxJava Samples の差分が既存方針に沿っているかを確認し、
 
 - `presentation -> domain <- data` が崩れていないか。
 - `presentation` が `data` のクラスを参照していないか。
-- `domain` に Android SDK、RxAndroid、DataBinding が入っていないか。
+- `domain` に Android SDK、RxAndroid、DataBinding、Retrofit、Moshi が入っていないか。
 - `data` に Android SDK、RxAndroid が入っていないか。
+- Retrofit と Moshi の型（`ForecastResponse` など）が `data/remote/` の外へ漏れていないか。
 - 実体の組み立てが `di/ServiceLocator` の外へ漏れていないか。
 
 ## ストリームの契約
 
-- Repository と UseCase が返すストリームが cold か。呼ばれただけで動き出していないか。
-- 実行ごとの状態を持つサンプルが `Observable.defer` の内側にあるか。
+- `ForecastRepository` と `GetForecastUseCase` が返す `Single` が cold か。呼ばれただけで通信が動き出していないか。
+- `subscribeOn` / `observeOn` が presentation（`ForecastViewModel`）以外に現れていないか。
 - `AndroidSchedulers.mainThread()` が presentation の外に現れていないか。
-- `Subject` を立てて `mergeWith` で合流させる書き方が入っていないか（取りこぼしが出る）。
-- `SampleLogLine` のスレッド名が、放出と同じスレッドで確定しているか。
-- `SampleLogs` を使わず `onCurrentThread` を直に呼ぶ書き方が、
-  `materialize` / `create` で書ける場面に広がっていないか。
+- 通信の失敗が `onError` としてそのまま上がっているか。`onErrorReturn` や `try-catch` で
+  空リストや `null`、既定値へ握り潰していないか。
+
+## API の語彙とガード節
+
+- 7Timer! の JSON の項目名や天気コードの文字列が `ForecastMapper` の外へ漏れていないか。
+- 未知の天気コードが例外にならず `WeatherCondition.UNKNOWN` に落ちているか。
+- `dataseries` や `temp2m` の欠落のような形の異常が、早期リターン（ガード節）で検査され
+  例外として上がっているか。分岐の奥で正常系と一緒くたに処理していないか。
+- 気温・風速・日付・緯度経度が `Temperature` / `WindSpeed` / `ForecastDate` / `Location` の
+  値オブジェクトを経由せず、生の `int` / `double` のまま層をまたいでいないか。
 
 ## 購読の寿命
 
 - 購読が ViewModel の 1 つに集約されているか。
-- 実行状態を落とす経路が 3 つとも塞がれているか（停止・正常終了・エラー終了）。
 - `onCleared()` で破棄されているか。
 - Activity 側で購読し直していないか（画面回転で二重になる）。
+- 再読み込みの前に、既存の購読の破棄と状態のリセットが行われているか。
 
-## 責務
+## 責務と状態
 
-- Activity が UseCase や `ServiceLocator` を直接呼んでいないか。
-  domain へのアクセスは ViewModel を通す。
-- Activity に条件分岐・整形・購読が染み出していないか。
-- ViewModel に `View` / `Context` が入っていないか。
-- 表示用の整形が domain の model へ移っていないか。
-- サンプル本体が `SampleCatalog` の外へ散っていないか。
+- Activity が UseCase や `ServiceLocator` を直接呼んでいないか。domain へのアクセスは ViewModel を通す。
+- Activity に条件分岐・整形・購読が染み出していないか
+  （`OnPropertyChangedCallback` での値の橋渡しと、`savedInstanceState` による初回起動判定は例外として許す）。
+- ViewModel に `View` / `Context` が入っていないか。エラー文言を `Context` なしで組み立てようとしていないか。
+- 読み込み中・成功・失敗が独立した状態として公開され、1 つの値で兼ねていないか。
+- 表示用の整形（`ForecastFormatter` が担う文言選択、`strings.xml` の書式）が domain の model へ移っていないか。
 
 ## 過剰
 
 - 委譲だけの UseCase を新たに増やしていないか。
-- `SampleLogs` の公開メソッドが増えていないか。
 - 既存 contract で足りるのに新しい公開 API を足していないか。
 - 呼び出し側のない public メソッドや overload が残っていないか。
 
 ## テストと検証
 
-- 変更した振る舞いのうち、JVM で検証できるものにテストがあるか。
+- 変更した振る舞いのうち、JVM で検証できるもの（`domain` の value object、`ForecastMapper`）にテストがあるか。
+- 実ネットワーク呼び出しや `AndroidSchedulers.mainThread()` を伴う経路が、
+  JVM Unit Test の対象として誤って扱われていないか。
 - エミュレータでしか確認できない項目が `docs/status.md` の未検証に残っているか。
 - 実行した task と結果が報告されているか。
 

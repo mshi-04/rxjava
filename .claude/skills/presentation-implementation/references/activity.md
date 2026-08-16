@@ -1,30 +1,45 @@
 # Activity（View）
 
-レイアウトを束ねるだけの薄い層に保つ。
+レイアウトを束ね、ViewModel の状態を RecyclerView へ橋渡しするだけの薄い層に保つ。
 
 ## 確認する対象
 
-- `presentation/list/MainActivity` と `presentation/run/SampleActivity`
-- 対応するレイアウトの `<data>` ブロック
+- `presentation/forecast/ForecastActivity`
+- `activity_forecast.xml` の `<data>` ブロック
 - `AndroidManifest.xml` の Activity 宣言
 
 ## 実装時の注意
 
-View がしてよいのは 3 つだけ。
+View がしてよいのは次だけ。
 
-- レイアウトを `DataBindingUtil.setContentView` で束ね、変数を渡す
+- レイアウトを `DataBindingUtil.setContentView` で束ね、`viewModel` 変数を渡す
 - `RecyclerView` の `LayoutManager` と `Adapter` を設定する
-- 画面遷移の `Intent` を組む
+- ViewModel が公開する `ObservableField<List<DailyForecast>>` の変更を `Adapter.submit(...)` へ橋渡しする
+- 画面の初回起動を検知して `viewModel.load()` を呼ぶ
 
 守ること。
 
 - 条件分岐・整形・購読を書かない。それらは ViewModel の仕事。
-- `findViewById` と `setOnClickListener` を使わない。
-- 画面遷移の `Intent` はその Activity 自身の `static createIntent(...)` で組む。
-  extra のキーを呼び出し側に知らせない。
-- extra には値オブジェクトの生の値（`SampleId.value()`）を載せ、受け側で型に戻す。
-- Activity を増やすときは `presentation` の下にパッケージを 1 つ足し、
-  Activity と ViewModel を対で置く。マニフェストの `parentActivityName` も設定する。
+- `findViewById` と `setOnClickListener` を使わない。ボタン押下はレイアウト側で ViewModel のメソッドへ直接束ねる。
+- `ObservableField<List<DailyForecast>>` は DataBinding が `RecyclerView` の内容へ直接反映できないため、
+  `Observable.OnPropertyChangedCallback` で変更を受け取り、取れた値を `Adapter.submit(...)` へ渡す。
+  この橋渡しは値の受け渡しであり、表示の条件分岐ではない。
+
+```java
+viewModel.forecasts.addOnPropertyChangedCallback(new Observable.OnPropertyChangedCallback() {
+    @Override
+    public void onPropertyChanged(Observable sender, int propertyId) {
+        List<DailyForecast> result = viewModel.forecasts.get();
+        if (result != null) {
+            adapter.submit(result);
+        }
+    }
+});
+```
+
+- 通信の起動は `savedInstanceState == null` のときだけ `viewModel.load()` を呼ぶ形で防ぐ。
+  画面回転による再生成では呼ばない。この判定は `Activity` だけが受け取れる `Bundle` に基づくため、
+  ViewModel 側では書けない。ViewModel 一般の「条件分岐を書かない」規則の例外として、ここだけで行う。
 
 ## テスト判断
 
@@ -33,4 +48,5 @@ View がしてよいのは 3 つだけ。
 ## 検証観点
 
 - `data` 層のクラスを import していないか。
-- ロジックが Activity へ染み出していないか（`if` が出てきたら疑う）。
+- ロジックが Activity へ染み出していないか（橋渡しと初回起動判定以外の `if` が出てきたら疑う）。
+- 画面回転のたびに `viewModel.load()` が呼ばれ、通信が重複していないか。

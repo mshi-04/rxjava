@@ -1,11 +1,11 @@
 ---
 name: domain-implementation
-description: アプリの語彙、公開 contract、UseCase を変える依頼で使う。RxJava Samples の domain 層の value object、entity、UseCase、Repository interface を担当する。
+description: アプリの語彙、公開 contract、UseCase を変える依頼で使う。東京の天気の domain 層の value object、entity、UseCase、Repository interface を担当する。
 ---
 
 # 目的
 
-RxJava Samples の語彙と公開 contract を、Android Framework に依存しない domain 層へ閉じる。
+東京の天気の語彙と公開 contract を、Android Framework に依存しない domain 層へ閉じる。
 
 # 最初に確認するもの
 
@@ -21,11 +21,11 @@ RxJava Samples の語彙と公開 contract を、Android Framework に依存し�
 
 | 役割クラス | 参照 |
 | --- | --- |
-| value object（`SampleId`） | [`references/value-object.md`](references/value-object.md) |
-| ログ 1 行（`SampleLogLine`） | [`references/log-line.md`](references/log-line.md) |
-| UseCase | [`references/usecase.md`](references/usecase.md) |
-| Repository interface | [`references/repository-interface.md`](references/repository-interface.md) |
-| 単純な entity（`Sample`） | reference なし。`docs/domain.md` の contract 方針に従う |
+| value object（`Temperature`, `TemperatureRange`, `WindSpeed`, `ForecastDate`, `Location`） | [`references/value-object.md`](references/value-object.md) |
+| UseCase（`GetForecastUseCase`） | [`references/usecase.md`](references/usecase.md) |
+| Repository interface（`ForecastRepository`） | [`references/repository-interface.md`](references/repository-interface.md) |
+| enum（`WeatherCondition`） | reference なし。`docs/domain.md` の WeatherCondition 節に従う |
+| 単純な entity（`DailyForecast`） | reference なし。`docs/domain.md` の contract 方針に従う |
 
 # 手順
 
@@ -38,9 +38,9 @@ RxJava Samples の語彙と公開 contract を、Android Framework に依存し�
 
 # 注意事項
 
-- domain 層に `Context`、`View`、`Handler`、RxAndroid、DataBinding を持ち込まない。
+- domain 層に `Context`、`View`、`Handler`、RxAndroid、DataBinding、Retrofit、Moshi を持ち込まない。
 - RxJava core（`io.reactivex.rxjava3.core`）だけは例外として許す。理由は `docs/domain.md`。
 - domain contract の変更が data、presentation へ波及するときは、対応する Skill を併用する。
-- Repository implementation の都合で entity を歪めない。
-- 表示のための値（整形済み文字列、色）は presentation へ、サンプルの実装都合の値は data へ置く。
+- 7Timer! API の都合で model を歪めない。API のレスポンス構造に合わせて `DailyForecast` の形を決めない。
+- 表示のための値（整形済み文字列、`℃` の記号、日付の書式）は presentation へ、API の都合の値（JSON の項目名、天気コードの文字列）は data へ置く。
 - 新しい公開 API は、既存 contract で足りない理由がある場合だけ追加する。

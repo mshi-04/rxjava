@@ -1,11 +1,11 @@
 ---
 name: test-implementation
-description: テストコードを追加・修正する依頼で使う。RxJava Samples の JVM Unit Test（JUnit Jupiter + TestObserver）を担当する。
+description: テストコードを追加・修正する依頼で使う。東京の天気の JVM Unit Test（JUnit Jupiter + TestObserver）を担当する。
 ---
 
 # 目的
 
-RxJava Samples の変更した振る舞いを、JVM で検証できる範囲で押さえる。
+東京の天気の変更した振る舞いを、JVM で検証できる範囲で押さえる。
 
 # 最初に確認するもの
 
@@ -17,12 +17,11 @@ RxJava Samples の変更した振る舞いを、JVM で検証できる範囲で�
 
 | 対象 | 判断 |
 | --- | --- |
-| `domain` の value object、entity | できる |
-| `data` の Repository implementation、`SampleLogs`、カタログのメタデータ | できる |
-| 有限で同期的なサンプル本体 | できる |
-| 無限ストリーム・実時間の `sleep` を含むサンプル | しない。エミュレータで確認する |
-| `AndroidSchedulers.mainThread()` を通る経路 | できない。エミュレータで確認する |
-| Activity、DataBinding、`ObservableField` | できない。エミュレータで確認する |
+| `domain` の value object（`Temperature` / `TemperatureRange` / `WindSpeed` / `ForecastDate` / `Location`）、`DailyForecast` | できる |
+| `data` の `ForecastMapper`（DTO から domain モデルへの写像） | できる |
+| `data` の `RemoteForecastRepository`、`ForecastApi` を通した実際の通信 | できない。実ネットワーク呼び出しを伴う。エミュレータ・実機で確認する |
+| `AndroidSchedulers.mainThread()` を通る経路（`ForecastViewModel` の購読） | できない。エミュレータで確認する |
+| Activity、DataBinding、`ObservableField` / `ObservableBoolean` | できない。エミュレータで確認する |
 
 # 手順
 

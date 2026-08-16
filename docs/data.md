@@ -1,100 +1,82 @@
 # data 層
 
-サンプルの定義と、`SampleRepository` の実装を置く。
-RxJava の記述はすべてこの層に集まる。
+7Timer! API との通信と、`ForecastRepository` の実装を置く。
+外部 API の語彙はすべてこの層に閉じる。
 
 ## 依存
 
 | import してよい | してはならない |
 | --- | --- |
-| `domain`、RxJava 全般 | Android SDK、RxAndroid、`presentation` |
+| `domain`、RxJava 全般、Retrofit、Moshi、OkHttp | Android SDK、RxAndroid、`presentation` |
 
-`AndroidSchedulers` は使わない。
-表示のためのスレッド移送は `presentation` が最後に付ける。
-ここに書くと、観察したい `observeOn` と表示の都合が混ざる。
+`AndroidSchedulers` は使わない。表示のためのスレッド移送は `presentation` が付ける。
+
+Retrofit と Moshi の型は `remote/` の外へ出さない。
+DTO や JSON の項目名が Repository の戻り値に現れたら、境界が漏れている。
 
 ## クラス
 
 | クラス | 役割 |
 | --- | --- |
-| `catalog/SampleDefinition` | id・タイトル・説明・実行関数の組 |
-| `catalog/SampleCatalog` | 全サンプルの定義と一覧 |
-| `catalog/SampleLogs` | ストリームを `SampleLogLine` 列へ変換する道具 |
-| `repository/InMemorySampleRepository` | `SampleRepository` の実装 |
+| `remote/ForecastApi` | Retrofit のインタフェース |
+| `remote/ForecastResponse` | API のレスポンス DTO |
+| `remote/ForecastMapper` | DTO から `domain` のモデルへの写像 |
+| `repository/RemoteForecastRepository` | `ForecastRepository` の実装 |
 
-## SampleDefinition
+## 7Timer! との通信
 
-`domain` の `Sample` との違いは、実行関数 (`Body`) を持つこと。
-`toSample()` で表示用の `Sample` へ落とす。
+```
+https://www.7timer.info/bin/api.pl?product=civillight&output=json&lat=&lon=
+```
 
-この分離により、`presentation` は一覧を描くのに
-サンプルの実装を一切参照しない。
+認証もキーもない。非商用の範囲で自由に使える。
+`civillight` は 7 日分を日単位で返す。1 日分の形は次のとおり。
 
-## SampleCatalog
+```json
+{"date":20260816,"weather":"lightrain","temp2m":{"max":26,"min":25},"wind10m_max":2}
+```
 
-サンプルの唯一の定義場所。`DEFINITIONS` は不変リストで、登録順が一覧の表示順になる。
+`product` と `output` は固定なので、Retrofit のメソッド引数ではなく URL に埋める。
+呼び出し側が指定できるのは緯度経度だけにする。
 
-サンプル 1 本は private static メソッド 1 つと、一覧への 1 行で表す。
-画面もレイアウトも増やさないのは、追加コストがそのまま学習の回数を決めるためである。
+`wind10m_max` は m/s ではなく階級である。単位付きで表示しない。
 
-登録済みのサンプルは [status.md](status.md) を参照。
-追加手順は [adding-samples.md](adding-samples.md) にある。
+## ForecastMapper
 
-### サンプル本体の規則
+DTO から `domain` のモデルへ写す。ここが唯一、API の語彙を知る場所。
 
-- 呼ばれた時点では何も起こさない cold な `Observable` を返す。
-  関数の中で `subscribe()` を呼んだり、スレッドを起こしたりしない
-- `subscribeOn` / `observeOn` は書いてよい。これは観察対象そのものなので隠さない
-- `AndroidSchedulers.mainThread()` は書かない
-- 出力は `SampleLogLine` だけ。`android.util.Log` と `System.out` は使わない
+- `date` の `20260816` を `ForecastDate` の年月日へ分解する
+- `weather` の文字列コードを `WeatherCondition` へ写す。
+  未知のコードと `null` は `UNKNOWN` に落とし、例外にしない。
+  API が値を増やしたときにアプリが落ちるより、その日だけ天気が不明になる方がよい
+- `temp2m` を `TemperatureRange` へ、`wind10m_max` を `WindSpeed` へ写す。
+  範囲外の値はここで例外になる。壊れた値を画面まで運ぶより、その場で止める
+- `dataseries` が欠けていたら空リストにせず例外にする。
+  形が変わったことを `onError` として上げる
 
-## SampleLogs
+検査は入口の早期リターンで書き、正常系を分岐の外に出す。
 
-変換の道具を 2 系統だけ持つ。
+## 通信の設定
 
-| メソッド | 使いどころ |
-| --- | --- |
-| `materialize(source)` | オペレータの結果を見せたいとき。`onNext` / `onError` / `onComplete` を 1 行ずつに変換する |
-| `create(work)` | 手続き的に、書いた順にログを出したいとき |
+組み立ては `di/ServiceLocator` に置く。
 
-`materialize` は `Observable` と `Flowable` の両方を受ける。
-`Flowable` 版は `materialize()` を先に適用してから `toObservable()` するため、
-上流の backpressure 制御はそのまま働く。
+`OkHttpClient` のタイムアウトは接続・読み取りとも 10 秒。
+待ちが長いと、画面が「読み込み中」のまま固まったのか通信しているのか区別できない。
 
-`create` が返すのも cold な `Observable` で、購読ごとにブロックを最初から実行する。
+`RxJava3CallAdapterFactory` は素の `create()` を使う。
+`createAsync()` は独自にスレッドを起こし、`presentation` が付けた `subscribeOn` の
+効果が見えなくなる。Scheduler の指定を呼び出し側から追えることを優先する。
 
-### 道具を使わない書き方
+## RemoteForecastRepository
 
-サンプル本体が `map` の中で `SampleLogLine.onCurrentThread` を直に呼ぶ形もある。
-`intervalWithDisposable` と `flowableBackpressure` が該当する。
-前者は終端しないため `materialize` が意味を持たず、
-後者はメッセージに破棄件数という値の外にある情報を混ぜる必要がある。
+API 呼び出しに `map` で `ForecastMapper` をつなぐだけに保つ。
 
-これは道具を増やす代わりの逃げ道であり、
-値そのものではなく値に付随する状態を見せたいときに限る。
-新しいサンプルでは、まず `materialize` か `create` で書けないかを確認する。
-
-### Subject を立てて合流させない
-
-`PublishSubject` を別に用意して `mergeWith` で本流に合流させる書き方は使わない。
-Subject は hot なため、合流先が購読を始める前に流れた行が落ちる。
-本流を非同期にすると、この取りこぼしはタイミング次第で再現しなくなる。
-
-手続き的にログを出したいときは `create` を使う。
-
-## InMemorySampleRepository
-
-`LinkedHashMap` で定義を保持し、登録順を一覧の順序として維持する。
-
-`run(id)` は実行関数を `Observable.defer` で包む。
-実行ごとにカウンタなどの状態を持つサンプルがあるため、
-購読のたびに作り直されることを保証する必要がある。
-
-未登録の `SampleId` には `IllegalArgumentException` を投げる。
-画面遷移は自前の識別子でしか起きないため、これは回復対象ではなく実装の誤りである。
+cold であり、購読するまで通信しない。Scheduler も指定しない。
+失敗はそのまま `onError` として上げ、握り潰さない。
 
 ## 変更するとき
 
-サンプルの出所を差し替えたくなったら（ファイルから読む、リモートから取る）、
-`SampleRepository` の別実装を作り、`di/ServiceLocator` の 1 行を変える。
-`domain` と `presentation` は触らない。
+API を差し替えるときは `ForecastRepository` の別実装を作り、
+`di/ServiceLocator` の 1 行を変える。`domain` と `presentation` は触らない。
+
+`remote/` の DTO と Mapper はその実装専用であり、他から参照させない。

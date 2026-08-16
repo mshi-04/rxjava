@@ -1,34 +1,32 @@
 # Repository implementation
 
-domain が所有する `SampleRepository` を満たし、サンプルの出所を隠す。
+`ForecastRepository` の実装。API 呼び出しに写像をつなぐだけの薄い層に保つ。
 
 ## 確認する対象
 
-- `data/repository/InMemorySampleRepository` の保持構造と `run` の実装
-- `domain/repository/SampleRepository` の契約
-- `di/ServiceLocator` での組み立て
+- `data/repository/RemoteForecastRepository` の現在の実装
+- `domain/repository/ForecastRepository` の契約
+- `data/remote/ForecastApi` と `data/remote/ForecastMapper`
 
 ## 実装時の注意
 
-- 定義は `LinkedHashMap` で保持する。登録順がそのまま一覧の表示順になるため、
-  順序が保証されない `Map` に替えない。
-- `findAll` は `Sample` へ落として返し、`SampleDefinition` を外へ出さない。
-  返すリストは `Collections.unmodifiableList` で包む。
-- `run(id)` は実行関数を `Observable.defer` で包む。
-  実行ごとにカウンタなどの状態を持つサンプルがあるため、
-  購読のたびに作り直されることを保証する必要がある。defer を外すと 2 回目以降が壊れる。
-- 未登録の識別子は `IllegalArgumentException` にする。
-  画面遷移は自前の識別子でしか起きないため、回復対象ではなく実装の誤りである。
-- 別の出所（ファイル、リモート）を足すときは、このクラスを書き換えず別実装を作り、
-  `ServiceLocator` の 1 行を変える。
+- `api.dailyForecast(...).map(ForecastMapper::toDailyForecasts)` のように、API 呼び出しへ `map` で
+  `ForecastMapper` をつなぐだけに保つ。分岐やリトライのようなロジックをここに増やさない。
+- cold であり、購読するまで通信しない。`subscribeOn` / `observeOn` をここで指定しない。
+  Scheduler の指定は presentation の仕事。
+- 失敗はそのまま `onError` として上げる。`onErrorReturn` や `try-catch` で握り潰さない。
+  握り潰すと、待っている状態と失敗した状態が画面から区別できなくなる。
+- 地点は `Location` のまま受け取り、呼び出し直前で `getLatitude()` / `getLongitude()` に分解する。
+  緯度経度を上位層へ生で運ばせない。
 
 ## テスト判断
 
-- 登録順が保たれること、未登録 id で例外になることを JVM Unit Test で押さえる。
-- `run()` が cold であること（購読するまで実行されない）と、
-  購読ごとに実行関数が呼び直されることを、カウンタを持つ fake で確認する。
+- 実ネットワーク呼び出しを伴うため、この実装自体は JVM Unit Test で検証しない。
+  変換ロジックの検証は `dto-and-mapper.md` の対象である `ForecastMapper` 側のテストで代替する。
+- 実際に通信できるかはエミュレータ・実機での確認に回す。
 
 ## 検証観点
 
-- `Observable.defer` が外れていないか。
-- `SampleDefinition` が戻り値や公開メソッドに漏れていないか。
+- `subscribeOn` / `observeOn` がこの層に付いていないか。
+- API の失敗を握り潰す経路が増えていないか。
+- `map` 以外の分岐・変換ロジックがここに漏れ出していないか。

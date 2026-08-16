@@ -1,22 +1,13 @@
-# RxJava Samples
+# 東京の天気
 
-RxJava 3 の挙動を画面上のログで観察する学習用 Android アプリ。
+7Timer! の API から東京の 7 日予報を取得して表示する Android アプリ。
 
-サンプルを一覧から選んで実行すると、各イベントがスレッド名つきの時系列ログとして流れる。
-オペレータの結果だけでなく、「どのスレッドで」「どの順に」「いつ終わるか」を見ることが目的。
-無限に流れるサンプルは停止ボタンで購読を破棄できる。
+画面は 1 枚。起動すると通信し、読み込み中・成功・失敗をそれぞれ別の表示で出す。
+失敗したときは再試行ボタンから取り直せる。
 
-## 収録しているサンプル
-
-| タイトル | 観察できること |
-| --- | --- |
-| Observable の基本 | just / filter / map をつないだときの onNext・onComplete |
-| Scheduler の切り替え | subscribeOn だけの場合と observeOn を足した場合で、値が流れるスレッドがどう変わるか |
-| interval と Disposable | 無限に流れ続けるストリームを dispose で止める |
-| Flowable と backpressure | 生産が消費より速いときに onBackpressureDrop が値を捨てる様子 |
-| BehaviorSubject の購読タイミング | 購読開始が遅れた側に直前の値が届くこと |
-| エラーハンドリングと retry | 2 回失敗してから成功する処理を retry で拾い、onErrorReturnItem で保険をかける |
-| zip による合成 | 有限のリストと interval を zip して、遅い側のペースで揃えて流す |
+小さなアプリだが、非同期処理が持つ問題は一通り出る。
+待っている状態、失敗した状態、再試行、画面回転をまたぐ購読の扱いである。
+これを RxJava と Clean Architecture でどう配置するかがこのリポジトリの主題になる。
 
 ## 動かす
 
@@ -32,10 +23,25 @@ android emulator start Pixel_10
 android run
 ```
 
-## 技術構成
+## 構成
 
-Java 17 + View (XML) + ViewDataBinding。RxJava 3.1.12 / RxAndroid 3.0.2。
-minSdk 24、compileSdk / targetSdk 36。
+Java 17 + View (XML) + ViewDataBinding。Clean Architecture の 3 層で、
+`presentation` の内部は MVVM。
 
-Clean Architecture の 3 層で、`presentation` の内部は MVVM。
+| 層 | 役割 |
+| --- | --- |
+| `domain` | モデル、値オブジェクト、UseCase、Repository インタフェース。Android 非依存 |
+| `data` | 7Timer! との通信と Repository 実装。Retrofit と Moshi はここに閉じる |
+| `presentation` | Activity、ViewModel、Adapter |
+| `di` | ServiceLocator |
+
+## 使っている API
+
+```
+https://www.7timer.info/bin/api.pl?product=civillight&output=json&lat=35.690&lon=139.692
+```
+
+認証もキーもない。利用規約は非商用の範囲で自由。
+仕様は https://www.7timer.info/doc.php?lang=en にある。
+
 設計と開発手順は [docs/](docs/) にある。

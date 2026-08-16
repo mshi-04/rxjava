@@ -4,16 +4,16 @@
 
 ## 確認する対象
 
-- `app/src/main/res/layout/` の 3 枚と、それぞれの `<data>` ブロック
-- 対応する binding クラスを使っている Activity / Adapter
+- `app/src/main/res/layout/activity_forecast.xml` と `item_forecast.xml`、それぞれの `<data>` ブロック
+- `presentation/forecast/ForecastFormatter`（`item_forecast.xml` が呼ぶ `@StringRes int` の変換）
+- 対応する binding クラスを使っている `ForecastActivity` / `ForecastAdapter`
 
 ## レイアウトと変数
 
 | レイアウト | 受け取る変数 |
 | --- | --- |
-| `activity_main.xml` | なし（`RecyclerView` の参照取得のみ） |
-| `item_sample.xml` | `sample`, `clickListener` |
-| `activity_sample.xml` | `sample`, `viewModel` |
+| `activity_forecast.xml` | `viewModel` |
+| `item_forecast.xml` | `forecast` |
 
 ## 実装時の注意
 
@@ -23,11 +23,26 @@
 
 ```xml
 <Button
-    android:enabled="@{viewModel.running}"
-    android:onClick="@{() -> viewModel.stop()}" />
+    android:onClick="@{() -> viewModel.load()}"
+    android:text="@string/forecast_retry" />
 ```
 
-- `ObservableBoolean` / `ObservableField` は `@{viewModel.running}` の形で読む。`.get()` は書かない。
+- `ObservableBoolean` / `ObservableField` は `@{viewModel.loading}` の形で読む。`.get()` は書かない。
+- 読み込み中・一覧・失敗の 3 つの表示は、それぞれ独立した `View` の `visibility` を
+  `viewModel.loading` / `viewModel.hasError` の組み合わせで出し分ける。1 つの `View` で兼ねない。
+- 天気の表示文言のように model からそのまま文字列にできない値は、`@StringRes int` を返す
+  変換関数（`ForecastFormatter.weatherLabelResId(...)`）を `<import>` し、
+  binding 式の暗黙の `context` で `context.getString(...)` して解決する。
+  `ForecastFormatter` 自身は `Context` を持たない。
+
+```xml
+<TextView
+    android:text="@{context.getString(ForecastFormatter.weatherLabelResId(forecast.weather))}" />
+```
+
+- 数値と単位を組み合わせる文言（日付、気温、風速）は `strings.xml` の書式文字列
+  （`@string/forecast_temperature_format` など）へ値オブジェクトのフィールドをそのまま渡す。
+  Java 側で文字列を組み立てない。
 - 文字サイズや色を直接書かず、Material 3 の theme 属性（`?attr/textAppearanceTitleMedium` など）を使う。
 - `paddingVertical` / `paddingHorizontal` は API 26 以降のため使わない。個別に書く。
 - Adapter で binding を使い回すときは、値を差し替えたあとに `executePendingBindings()` を呼ぶ。
@@ -45,5 +60,6 @@ DataBinding の失敗は Java 側のエラーだけを見ても分からない�
 
 ## 検証観点
 
-- レイアウトが参照している名前と、ViewModel が公開しているフィールド名が一致しているか。
+- レイアウトが参照している名前と、ViewModel / model が公開しているフィールド名が一致しているか。
 - `<layout>` で包まれていないレイアウトが混ざっていないか。
+- 読み込み中・一覧・失敗のいずれか 2 つ以上が同時に見える組み合わせが `visibility` の式に残っていないか。

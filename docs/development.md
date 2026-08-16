@@ -10,6 +10,7 @@
 | AGP / Gradle | 9.0.1 / 9.1.0 |
 | compileSdk / targetSdk / minSdk | 36 / 36 / 24 |
 | Rx | RxJava 3.1.12, RxAndroid 3.0.2 |
+| 通信 | Retrofit 3.0.0, Moshi 1.15.2, OkHttp（Retrofit 経由） |
 | JVM Unit Test | JUnit Jupiter 6.1.3（JUnit Platform） |
 | テーマ | Material 3 (`Theme.Material3.DayNight`) |
 
@@ -71,6 +72,18 @@ Java 側のエラーだけを見ても分からないことが多い。
 ```bash
 ./gradlew assembleDebug --no-build-cache --no-configuration-cache
 ```
+
+## 外部 API
+
+天気予報は 7Timer! の公開 API を使う。認証もキーもない。
+
+```
+https://www.7timer.info/bin/api.pl?product=civillight&output=json&lat=35.690&lon=139.692
+```
+
+利用規約は非商用の範囲で自由。仕様は https://www.7timer.info/doc.php?lang=en にある。
+
+`INTERNET` 権限が要る。HTTPS のみを使い、cleartext は許可しない。
 
 ## エミュレータでの実行
 
