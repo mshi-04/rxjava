@@ -1,7 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">RxJava Samples</string>
-    <string name="run">実行</string>
-    <string name="stop">停止</string>
-    <string name="log_empty">実行するとここにログが出ます</string>
+    <string name="app_name">東京の天気</string>
+
+    <string name="forecast_title">東京の7日間予報</string>
+    <string name="forecast_retry">再試行</string>
+    <string name="forecast_error_message">天気予報を取得できませんでした</string>
+    <string name="forecast_date_format">%1$d年%2$d月%3$d日</string>
+    <string name="forecast_temperature_format">最高 %1$d℃ / 最低 %2$d℃</string>
+    <string name="forecast_wind_format">風速階級 %1$d</string>
+
+    <string name="weather_clear">晴れ</string>
+    <string name="weather_partly_cloudy">晴れ時々曇り</string>
+    <string name="weather_mostly_cloudy">曇り時々晴れ</string>
+    <string name="weather_cloudy">曇り</string>
+    <string name="weather_humid">蒸し暑い</string>
+    <string name="weather_light_rain">小雨</string>
+    <string name="weather_occasional_showers">にわか雨</string>
+    <string name="weather_isolated_showers">所により雨</string>
+    <string name="weather_rain">雨</string>
+    <string name="weather_light_snow">小雪</string>
+    <string name="weather_snow">雪</string>
+    <string name="weather_rain_snow">みぞれ</string>
+    <string name="weather_thunderstorm">雷雨</string>
+    <string name="weather_thunderstorm_with_rain">雷を伴う雨</string>
+    <string name="weather_unknown">不明</string>
 </resources>
