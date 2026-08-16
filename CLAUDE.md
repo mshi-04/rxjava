@@ -11,6 +11,7 @@ Java 17 + View (XML) + ViewDataBinding、Clean Architecture の 3 層で present
 | --- | --- |
 | 全体設計、層と依存の向き | [architecture.md](docs/architecture.md) |
 | 層ごとの詳細 | [domain.md](docs/domain.md) / [data.md](docs/data.md) / [presentation.md](docs/presentation.md) |
+| テストの書き方、何を JVM で検証するか | [unit-test.md](docs/unit-test.md) |
 | 環境、ビルド、外部 API、依存更新、git 運用 | [development.md](docs/development.md) |
 
 コードは `app/src/main/java/com/example/rxjava/` 配下に
