@@ -5,7 +5,7 @@
 ## 確認する対象
 
 - `domain/model/` の `Temperature`, `TemperatureRange`, `WindSpeed`, `ForecastDate`, `Location`
-- それぞれを生成している `data/remote/ForecastMapper` と、`Location.TOKYO` を使う `di/ServiceLocator` / `presentation/forecast/ForecastViewModel`
+- それぞれを生成している `data/remote/ForecastMapper` と、`Location.TOKYO` を使う `di/ServiceLocator` / `presentation/viewmodel/ForecastViewModel`
 
 ## 実装時の注意
 

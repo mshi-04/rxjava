@@ -6,7 +6,7 @@ ViewModel 一般の規則（状態の公開、命名、`ServiceLocator` の使�
 
 ## 確認する対象
 
-- `presentation/forecast/ForecastViewModel` の `load` / `disposeCurrent` / `onCleared`
+- `presentation/viewmodel/ForecastViewModel` の `load` / `disposeCurrent` / `onCleared`
 - `GetForecastUseCase` が返すストリーム（cold、Scheduler 未指定）
 
 ## 実装時の注意

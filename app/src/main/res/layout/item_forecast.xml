@@ -3,7 +3,7 @@
 
     <data>
 
-        <import type="com.example.rxjava.presentation.forecast.ForecastFormatter" />
+        <import type="com.example.rxjava.presentation.util.ForecastFormatter" />
 
         <variable
             name="forecast"

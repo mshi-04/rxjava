@@ -20,7 +20,7 @@ RxJava のサンプルカタログ機能を全廃した。
 | `domain/usecase` | `GetForecastUseCase` |
 | `data/remote` | `ForecastApi`, `ForecastResponse`, `ForecastMapper` |
 | `data/repository` | `RemoteForecastRepository` |
-| `presentation/forecast` | `ForecastActivity`, `ForecastViewModel`, `ForecastAdapter`, `ForecastFormatter` |
+| `presentation` | `activity/ForecastActivity`, `viewmodel/ForecastViewModel`, `adapter/ForecastAdapter`, `util/ForecastFormatter` |
 | `di` | `ServiceLocator` |
 
 レイアウト 2 枚（`activity_forecast.xml` / `item_forecast.xml`）、

@@ -4,7 +4,7 @@
 
 ## 確認する対象
 
-- `presentation/forecast/ForecastActivity`
+- `presentation/activity/ForecastActivity`
 - `activity_forecast.xml` の `<data>` ブロック
 - `AndroidManifest.xml` の Activity 宣言
 

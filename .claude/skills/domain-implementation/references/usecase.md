@@ -6,7 +6,7 @@
 
 - `domain/usecase/GetForecastUseCase` の現在の実装
 - 依存する `ForecastRepository` のシグネチャ
-- 呼び出している `presentation/forecast/ForecastViewModel`
+- 呼び出している `presentation/viewmodel/ForecastViewModel`
 
 ## 実装時の注意
 

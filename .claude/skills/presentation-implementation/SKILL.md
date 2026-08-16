@@ -11,7 +11,7 @@ description: 画面の表示、操作、遷移、表示文言を変える依頼�
 
 - [`docs/architecture.md`](../../../docs/architecture.md)
 - [`docs/presentation.md`](../../../docs/presentation.md)
-- [`app/src/main/java/com/example/rxjava/presentation/forecast/`](../../../app/src/main/java/com/example/rxjava/presentation/forecast/)
+- [`app/src/main/java/com/example/rxjava/presentation/`](../../../app/src/main/java/com/example/rxjava/presentation/)
 - [`app/src/main/res/layout/`](../../../app/src/main/res/layout/)
 - [`app/src/main/res/values/strings.xml`](../../../app/src/main/res/values/strings.xml)
 

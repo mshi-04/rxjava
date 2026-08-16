@@ -14,7 +14,7 @@
         android:theme="@style/Theme.TokyoForecast">
 
         <activity
-            android:name=".presentation.forecast.ForecastActivity"
+            android:name=".presentation.activity.ForecastActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

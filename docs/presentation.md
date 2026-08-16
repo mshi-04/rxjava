@@ -15,10 +15,10 @@ MVVM で組む。View はレイアウトを束ねるだけで、状態と処理�
 
 | クラス | 役割 |
 | --- | --- |
-| `forecast/ForecastActivity` | View。ランチャー。RecyclerView を組み立て、結果をアダプタへ渡す |
-| `forecast/ForecastViewModel` | 予報の取得と、読み込み中・成功・失敗の状態を公開する |
-| `forecast/ForecastAdapter` | `item_forecast.xml` に `DailyForecast` を渡す |
-| `forecast/ForecastFormatter` | `WeatherCondition` を文字列リソース ID へ写す |
+| `activity/ForecastActivity` | View。ランチャー。RecyclerView を組み立て、結果をアダプタへ渡す |
+| `viewmodel/ForecastViewModel` | 予報の取得と、読み込み中・成功・失敗の状態を公開する |
+| `adapter/ForecastAdapter` | `item_forecast.xml` に `DailyForecast` を渡す |
+| `util/ForecastFormatter` | `WeatherCondition` を文字列リソース ID へ写す |
 
 ## View の責務
 

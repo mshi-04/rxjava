@@ -1,4 +1,4 @@
-package com.example.rxjava.presentation.forecast;
+package com.example.rxjava.presentation.activity;
 
 import android.os.Bundle;
 
@@ -12,6 +12,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.rxjava.R;
 import com.example.rxjava.databinding.ActivityForecastBinding;
 import com.example.rxjava.domain.model.DailyForecast;
+import com.example.rxjava.presentation.adapter.ForecastAdapter;
+import com.example.rxjava.presentation.viewmodel.ForecastViewModel;
 
 import java.util.List;
 

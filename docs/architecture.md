@@ -49,7 +49,7 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 com.example.rxjava/
   domain/       model/ repository/ usecase/
   data/         remote/ repository/
-  presentation/ forecast/
+  presentation/ activity/ adapter/ viewmodel/ util/
   di/           ServiceLocator
 ```
 

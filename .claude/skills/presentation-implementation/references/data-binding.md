@@ -5,7 +5,7 @@
 ## 確認する対象
 
 - `app/src/main/res/layout/activity_forecast.xml` と `item_forecast.xml`、それぞれの `<data>` ブロック
-- `presentation/forecast/ForecastFormatter`（`item_forecast.xml` が呼ぶ `@StringRes int` の変換）
+- `presentation/util/ForecastFormatter`（`item_forecast.xml` が呼ぶ `@StringRes int` の変換）
 - 対応する binding クラスを使っている `ForecastActivity` / `ForecastAdapter`
 
 ## レイアウトと変数

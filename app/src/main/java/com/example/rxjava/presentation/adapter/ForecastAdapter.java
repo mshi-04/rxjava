@@ -1,4 +1,4 @@
-package com.example.rxjava.presentation.forecast;
+package com.example.rxjava.presentation.adapter;
 
 import android.view.LayoutInflater;
 import android.view.ViewGroup;

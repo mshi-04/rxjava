@@ -7,7 +7,7 @@
 
         <variable
             name="viewModel"
-            type="com.example.rxjava.presentation.forecast.ForecastViewModel" />
+            type="com.example.rxjava.presentation.viewmodel.ForecastViewModel" />
     </data>
 
     <LinearLayout

@@ -1,4 +1,4 @@
-package com.example.rxjava.presentation.forecast;
+package com.example.rxjava.presentation.util;
 
 import androidx.annotation.StringRes;
 

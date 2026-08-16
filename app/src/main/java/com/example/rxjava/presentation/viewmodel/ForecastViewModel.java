@@ -1,4 +1,4 @@
-package com.example.rxjava.presentation.forecast;
+package com.example.rxjava.presentation.viewmodel;
 
 import androidx.databinding.ObservableBoolean;
 import androidx.databinding.ObservableField;

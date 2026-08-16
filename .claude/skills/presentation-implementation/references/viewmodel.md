@@ -4,7 +4,7 @@
 
 ## 確認する対象
 
-- `presentation/forecast/ForecastViewModel`
+- `presentation/viewmodel/ForecastViewModel`
 - 対応する `activity_forecast.xml` の binding 式
 - `di/ServiceLocator` の UseCase 取得口
 
