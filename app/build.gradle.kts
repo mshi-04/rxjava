@@ -45,6 +45,11 @@ dependencies {
     implementation(libs.rxjava)
     implementation(libs.rxandroid)
 
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.adapter.rxjava3)
+    implementation(libs.retrofit.converter.moshi)
+    implementation(libs.moshi)
+
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 
