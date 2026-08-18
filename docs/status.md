@@ -27,8 +27,14 @@ RxJava のサンプルカタログ機能を全廃した。
 レイアウト 2 枚（`activity_forecast.xml` / `item_forecast.xml`）、
 `AndroidManifest.xml`（`INTERNET` 権限）、`strings.xml`、`themes.xml`、Gradle 構成。
 
-テストは `app/src/test/` に 6 クラス 31 件。JUnit Jupiter 6.1.3。
-`ForecastMapperTest` と、値オブジェクト 5 種のテスト。書き方は [unit-test.md](unit-test.md)。
+テストは 2 系統。書き方は [unit-test.md](unit-test.md) と [ui-test.md](ui-test.md)。
+
+| 種別 | 内容 |
+| --- | --- |
+| JVM Unit Test | `app/src/test/` に 6 クラス 31 件。JUnit Jupiter 6.1.3 |
+| UI テスト | `app/src/androidTest/` に `ForecastActivityTest` 3 件。JUnit 4 + Espresso + Hilt |
+
+UI テストは `@TestInstallIn` で `RepositoryModule` を fake へ置き換え、通信を使わない。
 
 ## 検証済み
 
@@ -36,6 +42,7 @@ RxJava のサンプルカタログ機能を全廃した。
 | --- | --- |
 | `./gradlew assembleDebug` | 通る |
 | `./gradlew testDebugUnitTest` | 31 件すべて成功 |
+| `./gradlew connectedDebugAndroidTest` | 3 件すべて成功（Pixel_10 / API 37） |
 | 7Timer! API の応答 | `civillight` で東京の 7 日分が返ることを確認済み。認証・キーは不要 |
 | 層の境界 | `domain` と `data` に `android.*` / `androidx.*` の import がないことを確認 |
 
@@ -54,6 +61,7 @@ Pixel_10（API 37.1）で確認した。
 | レイアウトの余白 | 先頭の項目がシステムバーと重なる不具合を修正済み（下記） |
 | ダーク / ライト | ライトで確認。ダークは未確認 |
 | 読み込み中の表示 | 起動直後に `ProgressBar` が出ることを確認。消えるタイミングは未確認 |
+| 成功・失敗・再試行 | UI テストで自動検証するようにした |
 | DataBinding の書式と `ForecastFormatter` | 日付・気温・風速・天気ラベルすべて表示される |
 
 ### 見つけて直した不具合
@@ -81,6 +89,7 @@ Pixel_10（API 37.1）で確認した。
 
 ## 次の一手
 
-1. 回線を絞って読み込み中の表示が消えることを確認する
-2. ダークテーマで表示を確認する
-3. `assembleRelease` を通す
+1. `assembleRelease` を通す。`proguard-rules.pro` が空で、minify を有効にすると
+   Moshi のリフレクションが壊れる。実質未実装
+2. 成功後の再取得手段。再試行ボタンは失敗時にしか出ない
+3. ダークテーマで表示を確認する

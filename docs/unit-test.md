@@ -3,6 +3,8 @@
 JVM 上で動く `app/src/test/` のテストの正本。
 何をテストするか、どう書くかをここで決める。
 
+画面の振る舞いを見る instrumented test は [ui-test.md](ui-test.md) を参照。
+
 ## 構成
 
 | 項目 | 値 |
@@ -24,10 +26,11 @@ JUnit 4 は使わない。`org.junit.Test` と `org.junit.Assert` は残って�
 | `domain` の値オブジェクトと `DailyForecast` | できる |
 | `data` の `ForecastMapper` | できる |
 | `data` の `RemoteForecastRepository`（実通信を伴う） | しない。エミュレータで確認する |
-| `AndroidSchedulers.mainThread()` を通る経路 | できない。エミュレータで確認する |
-| Activity、DataBinding、`ObservableField` | できない。エミュレータで確認する |
+| `AndroidSchedulers.mainThread()` を通る経路 | できない。UI テストで見る |
+| Activity、DataBinding、`ObservableField` | できない。UI テストで見る |
 
-対象外のものは、何をエミュレータで確認すべきかを [status.md](status.md) の未検証に残す。
+対象外のものは [ui-test.md](ui-test.md) へ回すか、
+確認手段がないものは [status.md](status.md) の未検証に残す。
 
 ## AAA で書く
 

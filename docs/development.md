@@ -50,6 +50,12 @@ android create empty-activity --name=Probe --output=./probe-tmp
 ./gradlew lintDebug
 ```
 
+```bash
+./gradlew connectedDebugAndroidTest
+```
+
+instrumented test はエミュレータか実機の接続が要る。
+
 DataBinding の生成コードが絡む失敗は、原因のレイアウトが
 `app/build/reports/data_binding/` 以下のログに出る。
 Java 側のエラーだけを見ても分からないことが多い。
