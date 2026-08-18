@@ -60,6 +60,15 @@ DataBinding の生成コードが絡む失敗は、原因のレイアウトが
 `app/build/reports/data_binding/` 以下のログに出る。
 Java 側のエラーだけを見ても分からないことが多い。
 
+## release ビルドは対象外
+
+このリポジトリは配布しない。`assembleRelease` は通していないし、通す予定もない。
+
+`isMinifyEnabled = false` のままで、`proguard-rules.pro` は空である。
+minify を有効にすると Moshi が `ForecastResponse` のフィールドを
+リフレクションで読めなくなるため、`-keep` 規則が要る。
+配布する必要が出たときに初めて書く。
+
 ## ビルドの設定
 
 `gradle.properties` で次を有効にしている。

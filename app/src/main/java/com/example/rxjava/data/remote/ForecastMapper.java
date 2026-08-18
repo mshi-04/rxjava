@@ -58,15 +58,7 @@ public final class ForecastMapper {
     }
 
     private static WeatherCondition toWeatherCondition(String code) {
-        if (code == null) {
-            return WeatherCondition.UNKNOWN;
-        }
-
-        WeatherCondition condition = CONDITIONS.get(code);
-        if (condition == null) {
-            return WeatherCondition.UNKNOWN;
-        }
-        return condition;
+        return CONDITIONS.getOrDefault(code, WeatherCondition.UNKNOWN);
     }
 
     private static Map<String, WeatherCondition> conditions() {

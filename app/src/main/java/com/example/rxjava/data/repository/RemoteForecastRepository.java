@@ -1,7 +1,7 @@
 package com.example.rxjava.data.repository;
 
-import com.example.rxjava.data.remote.ForecastMapper;
 import com.example.rxjava.data.remote.ForecastApi;
+import com.example.rxjava.data.remote.ForecastMapper;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.Location;
 import com.example.rxjava.domain.repository.ForecastRepository;

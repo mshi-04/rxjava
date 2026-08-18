@@ -136,8 +136,6 @@ class ForecastMapperTest {
 
     private static ForecastResponse response(ForecastResponse.Entry... entries) {
         ForecastResponse response = new ForecastResponse();
-        response.product = "civillight";
-        response.init = "2026081606";
         response.dataseries = Arrays.asList(entries);
         return response;
     }

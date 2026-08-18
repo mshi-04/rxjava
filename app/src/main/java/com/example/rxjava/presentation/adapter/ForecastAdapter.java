@@ -1,5 +1,6 @@
 package com.example.rxjava.presentation.adapter;
 
+import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
@@ -17,6 +18,8 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
 
     private List<DailyForecast> forecasts = Collections.emptyList();
 
+    // 7 件の全面差し替えしか起きず、部分更新の通知に分ける意味がない
+    @SuppressLint("NotifyDataSetChanged")
     public void submit(List<DailyForecast> newForecasts) {
         forecasts = new ArrayList<>(newForecasts);
         notifyDataSetChanged();

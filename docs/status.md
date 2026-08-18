@@ -42,7 +42,7 @@ UI テストは `@TestInstallIn` で `RepositoryModule` を fake へ置き換え
 | --- | --- |
 | `./gradlew assembleDebug` | 通る |
 | `./gradlew testDebugUnitTest` | 31 件すべて成功 |
-| `./gradlew connectedDebugAndroidTest` | 3 件すべて成功（Pixel_10 / API 37） |
+| `./gradlew connectedDebugAndroidTest` | 3 件すべて成功（Pixel_10 / API 37）。下記の注意あり |
 | 7Timer! API の応答 | `civillight` で東京の 7 日分が返ることを確認済み。認証・キーは不要 |
 | 層の境界 | `domain` と `data` に `android.*` / `androidx.*` の import がないことを確認 |
 
@@ -60,7 +60,7 @@ Pixel_10（API 37.1）で確認した。
 | 回転後の一覧保持 | 一度空になる不具合を修正済み（下記） |
 | レイアウトの余白 | 先頭の項目がシステムバーと重なる不具合を修正済み（下記） |
 | ダーク / ライト | ライトで確認。ダークは未確認 |
-| 読み込み中の表示 | 起動直後に `ProgressBar` が出ることを確認。消えるタイミングは未確認 |
+| 読み込み中の表示 | 起動直後に出ることを確認。成功時に消えることは UI テストが押さえている |
 | 成功・失敗・再試行 | UI テストで自動検証するようにした |
 | DataBinding の書式と `ForecastFormatter` | 日付・気温・風速・天気ラベルすべて表示される |
 
@@ -80,16 +80,31 @@ Pixel_10（API 37.1）で確認した。
 登録直後に現在値を流し込むようにし、あわせて `onDestroy()` で解除するようにした。
 解除しないと古い Adapter への参照が回転のたびに積み上がる。
 
+## UI テストが全件落ちるとき
+
+`RootViewWithoutFocusException`（ウィンドウがフォーカスを得られない）で
+3 件とも落ちることがある。この症状はコードではなくエミュレータ側である。
+
+見分け方は 2 つ。
+
+- `android screen capture` が真っ黒なのに `android layout -p` は正常な階層を返す
+- `git stash` して直前のコミットで実行しても同じ 3 件が同じ理由で落ちる
+
+キーガード解除、画面の常時点灯、エミュレータの再起動では直らなかった。
+スナップショットを破棄したコールドブートか、AVD の作り直しが要る。
+
 ## 未検証
 
-- `release` ビルド（`assembleRelease`）。R8 と Moshi のリフレクションの相性は未確認
-- 読み込み中の表示が消えるタイミング。成功・失敗のどちらの経路でも `loading` が
-  戻る実装になっているが、画面では確認していない。回線を絞れば捉えられる
+- 失敗したときに `loading` が戻るか。成功時は UI テストが押さえている
+  （一覧の表示条件が `loading` と `hasError` の両方を見るため）が、
+  失敗時はエラー表示だけを検証しており `ProgressBar` が消えたかを見ていない
 - ダークテーマの表示。`windowLightStatusBar` を `values-night/` で出し分けたが未確認
+
+`release` ビルドは対象外。理由は [development.md](development.md)。
 
 ## 次の一手
 
-1. `assembleRelease` を通す。`proguard-rules.pro` が空で、minify を有効にすると
-   Moshi のリフレクションが壊れる。実質未実装
-2. 成功後の再取得手段。再試行ボタンは失敗時にしか出ない
+1. 成功後の再取得手段。再試行ボタンは失敗時にしか出ないため、
+   一度表示できると force-stop するまで更新できない
+2. 失敗時に `ProgressBar` が消えることを UI テストの検証に足す
 3. ダークテーマで表示を確認する

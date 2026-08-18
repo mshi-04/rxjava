@@ -2,7 +2,7 @@ package com.example.rxjava.domain.model;
 
 public final class Location {
 
-    public static final Location TOKYO = new Location(35.690, 139.692);
+    public static final Location TOKYO = of(35.690, 139.692);
 
     private final double latitude;
     private final double longitude;

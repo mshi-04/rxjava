@@ -29,8 +29,8 @@ public class ForecastViewModel extends ViewModel {
     private Disposable disposable;
 
     @Inject
-    public ForecastViewModel(GetForecastUseCase getForecast) {
-        this.getForecastUseCase = getForecast;
+    public ForecastViewModel(GetForecastUseCase getForecastUseCase) {
+        this.getForecastUseCase = getForecastUseCase;
     }
 
     public void load() {
