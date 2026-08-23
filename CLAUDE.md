@@ -3,7 +3,7 @@
 7Timer! の API から東京の 7 日予報を取得して表示する Android アプリ。
 Java 17 + View (XML) + ViewDataBinding、Clean Architecture の 3 層で presentation は MVVM。
 
-**作業前に [docs/status.md](docs/status.md) を読む。** 未検証の前提が残っている。
+**作業前に [development.md](docs/development.md) の「未確認のまま残っていること」を読む。**
 
 この文書は地図であり、詳細を持たない。正本は docs/ 配下。
 

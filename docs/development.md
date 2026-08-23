@@ -13,7 +13,7 @@
 | 通信 | Retrofit 3.0.0, Moshi 1.15.2, OkHttp（Retrofit 経由） |
 | DI | Hilt 2.60.1（Java なので annotationProcessor。KSP は使わない） |
 | JVM Unit Test | JUnit Jupiter 6.1.3（JUnit Platform） |
-| UI テスト | JUnit 4 + Espresso 3.7.0 + Hilt testing。androidTest 側だけ JUnit 4 |
+| UI テスト | Espresso 3.7.0 + Hilt testing。方針は [ui-test.md](ui-test.md) |
 | テーマ | Material 3 (`Theme.Material3.DayNight.NoActionBar`) |
 
 採用しないもの: Kotlin、Jetpack Compose、ViewBinding。
@@ -60,6 +60,15 @@ instrumented test はエミュレータか実機の接続が要る。
 DataBinding の生成コードが絡む失敗は、原因のレイアウトが
 `app/build/reports/data_binding/` 以下のログに出る。
 Java 側のエラーだけを見ても分からないことが多い。
+
+## 未確認のまま残っていること
+
+検証できていない前提はここに集める。潰したら消す。
+
+- ダークテーマの表示。`values-night/themes.xml` で `windowLightStatusBar` を
+  出し分けているが、実機で見ていない
+- 成功後に予報を取り直す手段が無い。再試行ボタンは失敗時にしか出ないため、
+  一度表示できると force-stop するまで更新できない。既知の制約であって不具合ではない
 
 ## release ビルドは対象外
 
@@ -113,8 +122,10 @@ android emulator start <名前>
 ```
 
 ```bash
-android run
+android run --apks app/build/outputs/apk/debug/app-debug.apk
 ```
+
+`android run` は APK の指定が要る。引数なしでは `No apks specified` で失敗する。
 
 ```bash
 android screen capture -o shot.png
@@ -156,5 +167,3 @@ android docs fetch "kb://..."
 - コミットメッセージは日本語、件名は「〜する」の形
 - 改行コードは `.gitattributes` で LF に統一。`*.bat` のみ CRLF
 - ビルド成果物・`local.properties`・署名鍵はコミットしない
-
-未検証の前提が残っている。着手前に [status.md](status.md) を読む。

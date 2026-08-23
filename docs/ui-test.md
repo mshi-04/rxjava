@@ -63,3 +63,27 @@ AAA のコメントも同じく置く。
 
 `ActivityScenario.launch` は fake の応答を設定したあとに呼ぶ。
 起動時に取得が走るため、順序を逆にすると意図した応答にならない。
+
+## 全件が落ちるとき
+
+`RootViewWithoutFocusException`（ウィンドウがフォーカスを得られない）で
+全件落ちることがある。この症状はコードではなくエミュレータ側である。
+
+見分け方は 2 つ。
+
+- `android screen capture` が真っ黒なのに `android layout -p` は正常な階層を返す
+- `git stash` して直前のコミットで実行しても同じテストが同じ理由で落ちる
+
+一度の遭遇では、キーガード解除・画面の常時点灯・エミュレータの再起動では直らなかった。
+復旧したのは AVD の作り直しである。
+
+```bash
+android emulator remove Pixel_10
+```
+
+```bash
+android emulator create Pixel_10
+```
+
+`android emulator start --cold <名前>` でスナップショットを捨てて起動する手もあるが、
+この症状に効くかは確かめていない。

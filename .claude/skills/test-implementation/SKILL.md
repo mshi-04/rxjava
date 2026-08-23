@@ -16,7 +16,7 @@ description: テストコードを追加・修正する依頼で使う。東京�
 # 手順
 
 1. 変更した振る舞いを洗い出し、`docs/unit-test.md` の「JVM で検証できる範囲」で対象かを判断する。
-2. 対象外のものは、何をエミュレータで確認すべきかを [`docs/status.md`](../../../docs/status.md) の未検証に残す。
+2. 対象外のものの扱いは `docs/unit-test.md` の「JVM で検証できる範囲」に従う。
 3. AAA でテストを追加・修正する。Arrange / Act / Assert それぞれにコメントを置く。
 4. `./gradlew testDebugUnitTest` を実行する。
 5. 追加・修正したテスト、実行した task と結果、未実施の検証と理由を簡潔に報告する。

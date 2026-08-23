@@ -11,8 +11,8 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 # 最初に確認するもの
 
 - [`docs/architecture.md`](../../../docs/architecture.md)
+- [`docs/development.md`](../../../docs/development.md) の「未確認のまま残っていること」
 - 差分が触れている層の docs（[`domain.md`](../../../docs/domain.md) / [`data.md`](../../../docs/data.md) / [`presentation.md`](../../../docs/presentation.md)）
-- [`docs/status.md`](../../../docs/status.md)
 - 差分と関連コード
 
 # 手順
@@ -82,7 +82,8 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 - 変更した振る舞いのうち、JVM で検証できるもの（`domain` の value object、`ForecastMapper`）にテストがあるか。
 - 実ネットワーク呼び出しや `AndroidSchedulers.mainThread()` を伴う経路が、
   JVM Unit Test の対象として誤って扱われていないか。
-- エミュレータでしか確認できない項目が `docs/status.md` の未検証に残っているか。
+- エミュレータでしか確認できない項目が `docs/development.md` の「未確認のまま残っていること」に
+  書かれているか。差分がそこへ追記していなければ指摘する。
 - 実行した task と結果が報告されているか。
 
 # 指摘の形式

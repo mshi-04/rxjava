@@ -36,8 +36,13 @@ View がしてよいのは 3 つだけ。
 <Button android:onClick="@{() -> viewModel.load()}" />
 ```
 
-初回の取得は `savedInstanceState == null` のときだけ呼ぶ。
-ViewModel は画面回転をまたいで生存するため、無条件に呼ぶと回転のたびに通信が走る。
+初回の取得は **ViewModel がまだ何もしていないとき**だけ呼ぶ。
+`forecasts` が `null` で、`loading` も `hasError` も立っていない状態が「まだ何もしていない」である。
+
+`savedInstanceState == null` で判定してはいけない。
+ViewModel が生存するのは設定変更のときだけで、プロセスが殺されて復帰した場合は
+Bundle が非 null なのに ViewModel は新品になる。Bundle で判定すると取得が呼ばれず、
+進捗もエラーも再試行ボタンも出ない空画面で固定される。
 
 ## ViewModel の責務
 
@@ -69,6 +74,14 @@ Activity 側には `@AndroidEntryPoint` が要る。付け忘れると実行時�
 1 つの値で兼ねない。空リストで「読み込み中」と「結果 0 件」を兼ねると、
 利用者にも実装にも区別がつかなくなる。
 
+失敗した `Throwable` は捨てずに `Log.w` で残す。画面に出さないことと、
+原因を追えなくすることは別である。
+
+状態の更新中に例外が出る経路も塞ぐ。`subscribe(onSuccess, onError)` の `onError` は
+上流のエラー専用で、`onSuccess` が投げた例外は `RxJavaPlugins.onError` へ回りアプリが落ちる。
+`forecasts.set()` は Activity のコールバックと Adapter まで同期的に呼ぶため、
+その連鎖の失敗も失敗状態として扱う。
+
 失敗は真偽値で公開し、メッセージ文字列は ViewModel が持たない。
 ViewModel は `Context` を持てないため文字列リソースを引けず、
 例外の `getMessage()` をそのまま出すのは読み手に意味がないうえ、
@@ -85,7 +98,7 @@ ViewModel は `Context` を持てないため文字列リソースを引けず�
 | --- | --- |
 | 初回表示・再試行 | 既存の購読を破棄し、失敗状態を落として読み込み中にしてから購読する |
 | 成功 | 読み込み中を落とし、結果を公開する |
-| 失敗 | 読み込み中を落とし、失敗状態を立てる |
+| 失敗 | 読み込み中を落とし、失敗状態を立て、原因を logcat へ残す |
 | `onCleared()` | 購読を破棄する |
 
 `GetForecastUseCase` が返すのは素の cold ストリームなので、
@@ -137,6 +150,9 @@ ActionBar を残すと `android:label` と画面内のタイトルが二重に�
 | --- | --- |
 | `activity_forecast.xml` | `viewModel` |
 | `item_forecast.xml` | `forecast` |
+
+読み込み中・一覧・失敗の各ビューには `android:id` を付ける。
+id が無いと Espresso から名指しできず、その状態がテストで検証できなくなる。
 
 表示の出し分けは binding 式で書く。
 `<import type="android.view.View"/>` を置き、`android:visibility` を

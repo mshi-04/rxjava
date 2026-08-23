@@ -29,8 +29,8 @@ JUnit 4 は使わない。`org.junit.Test` と `org.junit.Assert` は残って�
 | `AndroidSchedulers.mainThread()` を通る経路 | できない。UI テストで見る |
 | Activity、DataBinding、`ObservableField` | できない。UI テストで見る |
 
-対象外のものは [ui-test.md](ui-test.md) へ回すか、
-確認手段がないものは [status.md](status.md) の未検証に残す。
+対象外のものは [ui-test.md](ui-test.md) へ回す。
+どちらでも検証できないものは [development.md](development.md) の「未確認のまま残っていること」へ書き足す。
 
 ## AAA で書く
 
@@ -38,7 +38,7 @@ JUnit 4 は使わない。`org.junit.Test` と `org.junit.Assert` は残って�
 
 ```java
 @Test
-void ofCelsiusRejectsATemperatureAboveTheUpperBound() {
+void ofCelsius_aboveUpperBound_throwsIllegalArgument() {
     // Arrange
     int tooHot = 101;
 
@@ -58,8 +58,10 @@ void ofCelsiusRejectsATemperatureAboveTheUpperBound() {
 Arrange が不要なテストは `// Arrange` の行ごと落とし、
 残る 2 つにはコメントを置く。
 
-このリポジトリで**コメントを書いてよいのはテストコードだけ**である。
-本番コードは字面から読み取れる説明をコメントに書かない。
+テストコードは、字面から読み取れる説明であってもコメントを書いてよい唯一の場所である。
+本番コードは字面から読み取れる説明を書かない。
+ただし警告抑制の理由のように、ツールが要求するものは本番コードにも書く。
+判断の正本は `~/.claude/rules/comments.md`。
 
 ## 命名
 
@@ -77,6 +79,7 @@ void toDailyForecasts_missingDataseries_throwsIllegalState()
 区切りが要るのは、3 要素の境目が目で追えることが読みやすさの本体だからである。
 区切りなく連結した `ofCelsiusRejectsATemperatureAboveTheUpperBound` のような名前は、
 同じ情報量でもどこが条件でどこが期待値か掴めない。
+この形は使わない。
 
 第 1 部を対象メソッド名に固定すると、一覧が対象ごとに揃って並ぶ。
 `TOKYO` のような定数を対象にするときは定数名を第 1 部に置く。

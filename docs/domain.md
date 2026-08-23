@@ -38,7 +38,7 @@ RxAndroid は入れない。Scheduler の指定は domain の関心事ではな�
 | `Temperature` | 摂氏 -100〜100 |
 | `TemperatureRange` | 最高が最低を下回らない |
 | `WindSpeed` | 階級 0〜12 |
-| `ForecastDate` | 月 1〜12、日 1〜31 |
+| `ForecastDate` | 年 1900〜2999、月 1〜12、日 1〜31 |
 | `Location` | 緯度 -90〜90、経度 -180〜180 |
 
 `Temperature` と `WindSpeed` の範囲は API の契約そのものではなく、

@@ -111,8 +111,3 @@ API の実装を差し替えるときは `RepositoryModule` の 1 行を変え�
 
 `javax.inject` は JSR-330 の標準アノテーションで、Dagger の実行時にも Android にも依存しない。
 層を守る目的は Android と Retrofit を内側へ入れないことなので、ここには抵触しない。
-
----
-
-この文書は完成形の設計を書いている。
-実装がどこまで追いついているかは [status.md](status.md) を参照。

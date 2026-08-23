@@ -20,7 +20,7 @@ android emulator start Pixel_10
 ```
 
 ```bash
-android run
+android run --apks app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ## 構成
