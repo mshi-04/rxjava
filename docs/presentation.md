@@ -158,6 +158,10 @@ DataBinding は `List` を `RecyclerView` へ直接流せないため、この�
 一覧の差し替えは `notifyDataSetChanged()` で足りる。
 7 件の全面差し替えしか起きないため、`DiffUtil` は要らない。
 
+ただし lint が `NotifyDataSetChanged` を指摘するため、
+`@SuppressLint` と理由のコメントを添えて黙らせる。
+抑制しないと警告が毎回残り、本当に見るべき指摘が埋もれる。
+
 ## 変更するとき
 
 画面を増やすときは `presentation` の下にパッケージを 1 つ足し、

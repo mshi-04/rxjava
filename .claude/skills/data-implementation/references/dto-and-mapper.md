@@ -10,8 +10,10 @@ API のレスポンス構造を受け取る器（DTO）と、domain のモデル
 
 ## 実装時の注意
 
-- DTO（`ForecastResponse`）は Moshi が要求する `public` フィールドと `@Json(name = ...)` だけを持ち、
-  振る舞いを持たせない。JSON のキー名がそのままフィールド名と一致していても `@Json` を省略しない。
+- DTO（`ForecastResponse`）は Moshi が要求する `public` フィールドだけを持ち、振る舞いを持たせない。
+- `@Json(name = ...)` はキー名とフィールド名が食い違うときだけ付ける。
+  一致しているものにまで付けると、本当に読み替えが要る `temp2m` と `wind10m_max` が埋もれる。
+- 読まれないフィールドを DTO に残さない。JSON にあっても使わないなら書かない。
 - API の語彙を知ってよいのは `ForecastMapper` だけにする。天気コードの文字列や JSON のキー名を
   他のクラスへ持ち出さない。
 - `weather` の文字列コードから `WeatherCondition` への対応表はここに持つ。未知のコードと `null` は

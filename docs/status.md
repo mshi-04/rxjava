@@ -1,15 +1,6 @@
 # 現状
 
-最終更新: 2026-08-16
-
-## この版で変わったこと
-
-RxJava のサンプルカタログ機能を全廃した。
-アプリは 7Timer! の API から東京の 7 日予報を取得して表示する 1 画面になった。
-
-削除したもの: `data/catalog/`、`InMemorySampleRepository`、`Sample` 系のモデルと UseCase、
-`presentation/list/`、`presentation/run/`、対応するレイアウトとテスト、
-`docs/adding-samples.md`、`add-rx-sample` スキル。
+最終更新: 2026-08-23
 
 ## 実装済み
 

@@ -13,7 +13,8 @@
 | 通信 | Retrofit 3.0.0, Moshi 1.15.2, OkHttp（Retrofit 経由） |
 | DI | Hilt 2.60.1（Java なので annotationProcessor。KSP は使わない） |
 | JVM Unit Test | JUnit Jupiter 6.1.3（JUnit Platform） |
-| テーマ | Material 3 (`Theme.Material3.DayNight`) |
+| UI テスト | JUnit 4 + Espresso 3.7.0 + Hilt testing。androidTest 側だけ JUnit 4 |
+| テーマ | Material 3 (`Theme.Material3.DayNight.NoActionBar`) |
 
 採用しないもの: Kotlin、Jetpack Compose、ViewBinding。
 バインディングは DataBinding に一本化する。
@@ -115,8 +116,16 @@ android emulator start <名前>
 android run
 ```
 
-画面の確認は `android screenshot`、UI 階層の確認は `android layout -p` を使う。
-スクリーンショットを撮って目視するより、`android layout` のほうが速い。
+```bash
+android screen capture -o shot.png
+```
+
+```bash
+android layout -p
+```
+
+画面の確認は `android screen capture`、UI 階層の確認は `android layout -p` を使う。
+表示位置や重なりを調べるなら `android layout` のほうが速く、座標も取れる。
 
 ## 依存の更新
 
