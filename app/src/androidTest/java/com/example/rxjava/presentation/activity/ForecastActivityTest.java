@@ -14,6 +14,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import com.example.rxjava.R;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.ForecastDate;
+import com.example.rxjava.domain.model.Location;
 import com.example.rxjava.domain.model.Temperature;
 import com.example.rxjava.domain.model.TemperatureRange;
 import com.example.rxjava.domain.model.WeatherCondition;
@@ -35,6 +36,8 @@ import dagger.hilt.android.testing.HiltAndroidRule;
 import dagger.hilt.android.testing.HiltAndroidTest;
 import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+
+import static org.junit.Assert.assertEquals;
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4.class)
@@ -60,7 +63,8 @@ public class ForecastActivityTest {
         if (scenario != null) {
             scenario.close();
         }
-        RxJavaPlugins.reset();
+        // reset() はプロセス全体のフックを消すため、setUp で入れたものだけ戻す
+        RxJavaPlugins.setIoSchedulerHandler(null);
     }
 
     @Test
@@ -89,6 +93,46 @@ public class ForecastActivityTest {
         onView(withText(R.string.forecast_error_message)).check(matches(isDisplayed()));
         onView(withText(R.string.forecast_retry)).check(matches(isDisplayed()));
         onView(withId(R.id.forecastList)).check(matches(not(isDisplayed())));
+        onView(withId(R.id.loadingIndicator)).check(matches(not(isDisplayed())));
+    }
+
+    @Test
+    public void forecastScreen_loadSucceeds_hidesLoadingIndicator() {
+        // Arrange
+        repository.respondWith(Collections.singletonList(lightRainOnAugust16()));
+
+        // Act
+        scenario = ActivityScenario.launch(ForecastActivity.class);
+
+        // Assert
+        onView(withId(R.id.loadingIndicator)).check(matches(not(isDisplayed())));
+        onView(withId(R.id.errorContainer)).check(matches(not(isDisplayed())));
+    }
+
+    @Test
+    public void forecastScreen_load_requestsTokyo() {
+        // Arrange
+        repository.respondWith(Collections.singletonList(lightRainOnAugust16()));
+
+        // Act
+        scenario = ActivityScenario.launch(ForecastActivity.class);
+
+        // Assert
+        assertEquals(Location.TOKYO, repository.requestedLocation());
+    }
+
+    @Test
+    public void forecastScreen_recreated_keepsForecast() {
+        // Arrange
+        repository.respondWith(Collections.singletonList(lightRainOnAugust16()));
+        scenario = ActivityScenario.launch(ForecastActivity.class);
+        onView(withText("2026年8月16日")).check(matches(isDisplayed()));
+
+        // Act
+        scenario.recreate();
+
+        // Assert
+        onView(withText("2026年8月16日")).check(matches(isDisplayed()));
     }
 
     @Test

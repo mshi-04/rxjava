@@ -49,14 +49,18 @@ public class ForecastActivity extends AppCompatActivity {
         // 回転後は ViewModel が値を保持済みで変更通知が来ないため、登録直後に現在値を流す
         submitForecasts();
 
-        if (savedInstanceState == null) {
+        // Bundle ではなく ViewModel の状態で判定する。プロセス death からの復帰では
+        // Bundle が非 null でも ViewModel は新品で、Bundle を見ると取得が呼ばれない
+        if (viewModel.isUntouched()) {
             viewModel.load();
         }
     }
 
     @Override
     protected void onDestroy() {
-        viewModel.forecasts.removeOnPropertyChangedCallback(forecastsCallback);
+        if (viewModel != null && forecastsCallback != null) {
+            viewModel.forecasts.removeOnPropertyChangedCallback(forecastsCallback);
+        }
         super.onDestroy();
     }
 

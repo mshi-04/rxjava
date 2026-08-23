@@ -41,12 +41,14 @@
                 android:visibility="@{viewModel.loading || viewModel.hasError ? View.GONE : View.VISIBLE}" />
 
             <ProgressBar
+                android:id="@+id/loadingIndicator"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:visibility="@{viewModel.loading ? View.VISIBLE : View.GONE}" />
 
             <LinearLayout
+                android:id="@+id/errorContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"

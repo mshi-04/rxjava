@@ -118,6 +118,7 @@ class ForecastMapperTest {
         ForecastResponse.Entry entry = new ForecastResponse.Entry();
         entry.date = 20260816;
         entry.weather = "clear";
+        entry.maxWind = 2;
         Executable mapping = () -> ForecastMapper.toDailyForecasts(response(entry));
 
         // Act & Assert
@@ -125,13 +126,88 @@ class ForecastMapperTest {
     }
 
     @Test
-    void toDailyForecasts_windLevelOutOfRange_throwsIllegalArgument() {
+    void toDailyForecasts_windLevelOutOfRange_throwsIllegalState() {
         // Arrange
         Executable mapping = () ->
                 ForecastMapper.toDailyForecasts(response(entry(20260816, "clear", 26, 25, 99)));
 
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, mapping);
+        assertThrows(IllegalStateException.class, mapping);
+    }
+
+    @Test
+    void toDailyForecasts_oneMalformedEntry_keepsTheRest() {
+        // Arrange
+        ForecastResponse.Entry broken = entry(20260817, "clear", 20, 25, 3);
+        ForecastResponse response = response(
+                entry(20260816, "lightrain", 26, 25, 2),
+                broken,
+                entry(20260818, "cloudy", 30, 24, 3));
+
+        // Act
+        List<DailyForecast> forecasts = ForecastMapper.toDailyForecasts(response);
+
+        // Assert
+        assertAll(
+                () -> assertEquals(2, forecasts.size()),
+                () -> assertEquals(16, forecasts.get(0).getDate().getDay()),
+                () -> assertEquals(18, forecasts.get(1).getDate().getDay()));
+    }
+
+    @Test
+    void toDailyForecasts_everyEntryMalformed_throwsIllegalState() {
+        // Arrange
+        Executable mapping = () ->
+                ForecastMapper.toDailyForecasts(response(entry(20260816, "clear", 20, 25, 2)));
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, mapping);
+    }
+
+    @Test
+    void toDailyForecasts_missingDate_throwsIllegalState() {
+        // Arrange
+        Executable mapping = () ->
+                ForecastMapper.toDailyForecasts(response(entry(null, "clear", 26, 25, 2)));
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, mapping);
+    }
+
+    @Test
+    void toDailyForecasts_missingWind_throwsIllegalState() {
+        // Arrange
+        Executable mapping = () ->
+                ForecastMapper.toDailyForecasts(response(entry(20260816, "clear", 26, 25, null)));
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, mapping);
+    }
+
+    @Test
+    void toDailyForecasts_missingMaxTemperature_throwsIllegalState() {
+        // Arrange
+        ForecastResponse.Temperature temperature = new ForecastResponse.Temperature();
+        temperature.min = 20;
+        ForecastResponse.Entry entry = new ForecastResponse.Entry();
+        entry.date = 20260816;
+        entry.weather = "clear";
+        entry.temperature = temperature;
+        entry.maxWind = 2;
+        Executable mapping = () -> ForecastMapper.toDailyForecasts(response(entry));
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, mapping);
+    }
+
+    @Test
+    void toDailyForecasts_yearOutOfRange_throwsIllegalState() {
+        // Arrange
+        Executable mapping = () ->
+                ForecastMapper.toDailyForecasts(response(entry(99991231, "clear", 26, 25, 2)));
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, mapping);
     }
 
     private static ForecastResponse response(ForecastResponse.Entry... entries) {
@@ -141,7 +217,7 @@ class ForecastMapperTest {
     }
 
     private static ForecastResponse.Entry entry(
-            int date, String weather, int max, int min, int wind) {
+            Integer date, String weather, Integer max, Integer min, Integer wind) {
         ForecastResponse.Temperature temperature = new ForecastResponse.Temperature();
         temperature.max = max;
         temperature.min = min;

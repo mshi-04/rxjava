@@ -2,6 +2,9 @@ package com.example.rxjava.domain.model;
 
 public final class ForecastDate {
 
+    private static final int MIN_YEAR = 1900;
+    private static final int MAX_YEAR = 2999;
+
     private final int year;
     private final int month;
     private final int day;
@@ -13,6 +16,9 @@ public final class ForecastDate {
     }
 
     public static ForecastDate of(int year, int month, int day) {
+        if (year < MIN_YEAR || year > MAX_YEAR) {
+            throw new IllegalArgumentException("年が範囲外: " + year);
+        }
         if (month < 1 || month > 12) {
             throw new IllegalArgumentException("月が範囲外: " + month);
         }

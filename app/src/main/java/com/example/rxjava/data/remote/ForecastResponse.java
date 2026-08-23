@@ -8,14 +8,14 @@ public final class ForecastResponse {
 
     public static final class Temperature {
 
-        public int max;
+        public Integer max;
 
-        public int min;
+        public Integer min;
     }
 
     public static final class Entry {
 
-        public int date;
+        public Integer date;
 
         public String weather;
 
@@ -23,7 +23,7 @@ public final class ForecastResponse {
         public Temperature temperature;
 
         @Json(name = "wind10m_max")
-        public int maxWind;
+        public Integer maxWind;
     }
 
     public List<Entry> dataseries;

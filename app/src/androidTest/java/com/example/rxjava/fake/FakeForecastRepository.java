@@ -15,7 +15,9 @@ import io.reactivex.rxjava3.core.Single;
 @Singleton
 public final class FakeForecastRepository implements ForecastRepository {
 
-    private Single<List<DailyForecast>> response = Single.just(Collections.emptyList());
+    // テストスレッドが書き、購読スレッドが読むため可視性を保証する
+    private volatile Single<List<DailyForecast>> response = Single.just(Collections.emptyList());
+    private volatile Location requestedLocation;
 
     @Inject
     public FakeForecastRepository() {
@@ -29,9 +31,16 @@ public final class FakeForecastRepository implements ForecastRepository {
         response = Single.error(error);
     }
 
+    public Location requestedLocation() {
+        return requestedLocation;
+    }
+
     @Override
     public Single<List<DailyForecast>> find(Location location) {
         // defer で包み、購読の時点の設定を読む。再試行のテストが途中で応答を差し替える
-        return Single.defer(() -> response);
+        return Single.defer(() -> {
+            requestedLocation = location;
+            return response;
+        });
     }
 }

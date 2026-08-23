@@ -27,17 +27,38 @@ public final class ForecastMapper {
 
         List<DailyForecast> forecasts = new ArrayList<>(response.dataseries.size());
         for (ForecastResponse.Entry entry : response.dataseries) {
-            forecasts.add(toDailyForecast(entry));
+            DailyForecast forecast = toDailyForecastOrNull(entry);
+            if (forecast != null) {
+                forecasts.add(forecast);
+            }
+        }
+        if (forecasts.isEmpty() && !response.dataseries.isEmpty()) {
+            throw new IllegalStateException("dataseries のどの要素も読めなかった");
         }
         return Collections.unmodifiableList(forecasts);
+    }
+
+    // 1 日分が壊れていても残りは返す。飛ばした事実は data 層の外へ出さない
+    private static DailyForecast toDailyForecastOrNull(ForecastResponse.Entry entry) {
+        try {
+            return toDailyForecast(entry);
+        } catch (RuntimeException malformedEntry) {
+            return null;
+        }
     }
 
     private static DailyForecast toDailyForecast(ForecastResponse.Entry entry) {
         if (entry == null) {
             throw new IllegalStateException("dataseries に空の要素がある");
         }
+        if (entry.date == null) {
+            throw new IllegalStateException("date を含まない要素");
+        }
         if (entry.temperature == null) {
             throw new IllegalStateException("temp2m を含まない要素: " + entry.date);
+        }
+        if (entry.maxWind == null) {
+            throw new IllegalStateException("wind10m_max を含まない要素: " + entry.date);
         }
 
         return new DailyForecast(
@@ -52,6 +73,10 @@ public final class ForecastMapper {
     }
 
     private static TemperatureRange toTemperatureRange(ForecastResponse.Temperature temperature) {
+        if (temperature.max == null || temperature.min == null) {
+            throw new IllegalStateException("temp2m の max か min が欠けている");
+        }
+
         return TemperatureRange.of(
                 Temperature.ofCelsius(temperature.max),
                 Temperature.ofCelsius(temperature.min));

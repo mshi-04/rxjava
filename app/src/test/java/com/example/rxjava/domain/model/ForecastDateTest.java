@@ -36,6 +36,18 @@ class ForecastDateTest {
     }
 
     @Test
+    void of_yearOutsideRange_throwsIllegalArgument() {
+        // Arrange
+        Executable tooEarly = () -> ForecastDate.of(1899, 8, 16);
+        Executable tooLate = () -> ForecastDate.of(3000, 8, 16);
+
+        // Act & Assert
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class, tooEarly),
+                () -> assertThrows(IllegalArgumentException.class, tooLate));
+    }
+
+    @Test
     void of_monthOutsideYear_throwsIllegalArgument() {
         // Arrange
         Executable zero = () -> ForecastDate.of(2026, 0, 16);
