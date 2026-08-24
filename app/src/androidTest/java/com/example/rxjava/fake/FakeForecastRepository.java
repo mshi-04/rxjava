@@ -31,6 +31,10 @@ public final class FakeForecastRepository implements ForecastRepository {
         response = Single.error(error);
     }
 
+    public void remainPending() {
+        response = Single.never();
+    }
+
     public Location requestedLocation() {
         return requestedLocation;
     }

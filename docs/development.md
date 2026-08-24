@@ -111,9 +111,13 @@ minify を有効にすると Moshi が `ForecastResponse` のフィールドを
 https://www.7timer.info/bin/api.pl?product=civillight&output=json&lat=35.690&lon=139.692
 ```
 
-利用規約は非商用の範囲で自由。仕様は https://www.7timer.info/doc.php?lang=en にある。
+現行の公式 Wiki では、無料・有料のソフトウェアで利用でき、利用許可の取得は不要と
+案内されている。利用時は最新の記載を確認する。仕様と利用条件は
+https://github.com/Yeqzids/7timer-issues/wiki/Wiki にある。
 
 `INTERNET` 権限が要る。HTTPS のみを使い、cleartext は許可しない。
+`res/xml/network_security_config.xml` の `base-config` で平文通信を拒否し、
+Manifest の `android:networkSecurityConfig` から参照する。
 
 ## エミュレータでの実行
 

@@ -2,7 +2,9 @@ package com.example.rxjava.data.remote;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.ForecastDate;
@@ -157,11 +159,17 @@ class ForecastMapperTest {
     @Test
     void toDailyForecasts_everyEntryMalformed_throwsIllegalState() {
         // Arrange
-        Executable mapping = () ->
-                ForecastMapper.toDailyForecasts(response(entry(20260816, "clear", 20, 25, 2)));
+        Executable mapping = () -> ForecastMapper.toDailyForecasts(response(
+                entry(null, "clear", 26, 25, 2),
+                entry(20260816, "clear", 20, 25, 2)));
 
-        // Act & Assert
-        assertThrows(IllegalStateException.class, mapping);
+        // Act
+        IllegalStateException exception = assertThrows(IllegalStateException.class, mapping);
+
+        // Assert
+        IllegalStateException cause =
+                assertInstanceOf(IllegalStateException.class, exception.getCause());
+        assertTrue(cause.getMessage().contains("date"));
     }
 
     @Test

@@ -42,9 +42,10 @@ viewModel.forecasts.addOnPropertyChangedCallback(new Observable.OnPropertyChange
 });
 ```
 
-- 通信の起動は `savedInstanceState == null` のときだけ `viewModel.load()` を呼ぶ形で防ぐ。
-  画面回転による再生成では呼ばない。この判定は `Activity` だけが受け取れる `Bundle` に基づくため、
-  ViewModel 側では書けない。ViewModel 一般の「条件分岐を書かない」規則の例外として、ここだけで行う。
+- 通信の起動は `viewModel.isUntouched()` が `true` のときだけ `viewModel.load()` を呼ぶ形で防ぐ。
+  画面回転では既存の ViewModel が状態を保持するため再取得せず、プロセス death からの復帰では
+  新しい ViewModel が未着手なので取得する。`savedInstanceState == null` で判定してはいけない。
+  プロセス復帰では `Bundle` が非 `null` でも ViewModel は新品になり、取得しないと空画面で固定される。
 
 ## テスト判断
 
@@ -53,6 +54,8 @@ viewModel.forecasts.addOnPropertyChangedCallback(new Observable.OnPropertyChange
 ## 検証観点
 
 - `data` 層のクラスを import していないか。
-- ロジックが Activity へ染み出していないか（橋渡しと初回起動判定以外の `if` が出てきたら疑う）。
+- ロジックが Activity へ染み出していないか（橋渡しと `viewModel.isUntouched()` による
+  初回起動判定以外の `if` が出てきたら疑う）。
 - 画面回転のたびに `viewModel.load()` が呼ばれ、通信が重複していないか。
+- プロセス death からの復帰で新しい ViewModel が取得を開始するか。
 - 回転後に一覧が空にならないか。登録直後の流し込みとコールバック解除が揃っているか。

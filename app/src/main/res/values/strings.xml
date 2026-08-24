@@ -13,7 +13,7 @@
     <string name="weather_partly_cloudy">晴れ時々曇り</string>
     <string name="weather_mostly_cloudy">曇り時々晴れ</string>
     <string name="weather_cloudy">曇り</string>
-    <string name="weather_humid">蒸し暑い</string>
+    <string name="weather_humid">湿度が高い</string>
     <string name="weather_light_rain">小雨</string>
     <string name="weather_occasional_showers">にわか雨</string>
     <string name="weather_isolated_showers">所により雨</string>

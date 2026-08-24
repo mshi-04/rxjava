@@ -37,7 +37,9 @@ JUnit 4 のルール機構に依存しており、揃えられない。
 Espresso は RxJava のスレッドを知らないため、そのままだと待ってくれない。
 
 `RxJavaPlugins.setIoSchedulerHandler` で `io` を `trampoline` に差し替え、
-購読したスレッドで同期実行させる。`@After` で `RxJavaPlugins.reset()` する。
+購読したスレッドで同期実行させる。`@After` では、このテストが設定したフックだけを
+`RxJavaPlugins.setIoSchedulerHandler(null)` で解除する。`RxJavaPlugins.reset()` は
+他のテストやライブラリが設定したフックまで消すため使わない。
 
 `AndroidSchedulers.mainThread()` は差し替えない。
 差し替えると View の更新がメインスレッド外で走って落ちる。
@@ -49,6 +51,7 @@ Espresso は RxJava のスレッドを知らないため、そのままだと待
 
 | 対象 | 見るもの |
 | --- | --- |
+| 読み込み中 | 応答が完了しない間、進捗表示が出て一覧とエラー表示が出ない |
 | 成功 | 予報の日付・天気・気温が表示される |
 | 失敗 | エラー文言と再試行ボタンが表示され、一覧が出ない |
 | 再試行 | 失敗表示から再試行を押すと一覧に変わる |

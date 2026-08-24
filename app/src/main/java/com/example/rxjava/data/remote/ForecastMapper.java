@@ -26,25 +26,22 @@ public final class ForecastMapper {
         }
 
         List<DailyForecast> forecasts = new ArrayList<>(response.dataseries.size());
+        RuntimeException firstMalformedEntry = null;
         for (ForecastResponse.Entry entry : response.dataseries) {
-            DailyForecast forecast = toDailyForecastOrNull(entry);
-            if (forecast != null) {
-                forecasts.add(forecast);
+            try {
+                forecasts.add(toDailyForecast(entry));
+            } catch (RuntimeException malformedEntry) {
+                if (firstMalformedEntry == null) {
+                    firstMalformedEntry = malformedEntry;
+                }
             }
         }
         if (forecasts.isEmpty() && !response.dataseries.isEmpty()) {
-            throw new IllegalStateException("dataseries のどの要素も読めなかった");
+            throw new IllegalStateException(
+                    "dataseries のどの要素も読めなかった",
+                    firstMalformedEntry);
         }
         return Collections.unmodifiableList(forecasts);
-    }
-
-    // 1 日分が壊れていても残りは返す。飛ばした事実は data 層の外へ出さない
-    private static DailyForecast toDailyForecastOrNull(ForecastResponse.Entry entry) {
-        try {
-            return toDailyForecast(entry);
-        } catch (RuntimeException malformedEntry) {
-            return null;
-        }
     }
 
     private static DailyForecast toDailyForecast(ForecastResponse.Entry entry) {

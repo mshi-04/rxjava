@@ -49,8 +49,10 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 
 - 7Timer! の JSON の項目名や天気コードの文字列が `ForecastMapper` の外へ漏れていないか。
 - 未知の天気コードが例外にならず `WeatherCondition.UNKNOWN` に落ちているか。
-- `dataseries` や `temp2m` の欠落のような形の異常が、早期リターン（ガード節）で検査され
-  例外として上がっているか。分岐の奥で正常系と一緒くたに処理していないか。
+- `dataseries` のうち写せない 1 日分だけが除外され、利用できる日は返されるか。
+- `dataseries` 自体の欠落、または要素があるのに 1 件も写せない状態が例外として上がるか。
+  空リストや `null` に潰して形の異常を隠していないか。
+- 全件を写せない例外の cause に最初の日別変換例外が残り、欠けた項目などを診断できるか。
 - 気温・風速・日付・緯度経度が `Temperature` / `WindSpeed` / `ForecastDate` / `Location` の
   値オブジェクトを経由せず、生の `int` / `double` のまま層をまたいでいないか。
 
@@ -66,7 +68,9 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 - Activity が UseCase を直接呼んでいないか。domain へのアクセスは ViewModel を通す。
 - `@AndroidEntryPoint` と `@HiltViewModel` が対で付いているか。
 - Activity に条件分岐・整形・購読が染み出していないか
-  （`OnPropertyChangedCallback` での値の橋渡しと、`savedInstanceState` による初回起動判定は例外として許す）。
+  （`OnPropertyChangedCallback` での値の橋渡しと、`viewModel.isUntouched()` による初回起動判定は例外として許す）。
+- 初回取得を `savedInstanceState` で判定していないか。プロセス death からの復帰では
+  `Bundle` が非 `null` でも ViewModel は新品なので、`isUntouched()` で判定する。
 - ViewModel に `View` / `Context` が入っていないか。エラー文言を `Context` なしで組み立てようとしていないか。
 - 読み込み中・成功・失敗が独立した状態として公開され、1 つの値で兼ねていないか。
 - 表示用の整形（`ForecastFormatter` が担う文言選択、`strings.xml` の書式）が domain の model へ移っていないか。

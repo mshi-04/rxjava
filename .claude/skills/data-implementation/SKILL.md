@@ -43,6 +43,9 @@ description: 7Timer! API との通信、DTO と写像、Repository 実装を変�
 - Retrofit と Moshi の型を `data/remote/` の外へ出さない。`ForecastResponse` や JSON の項目名が
   Repository の戻り値に現れたら境界が漏れている。
 - API の語彙（天気コードの文字列、JSON のキー名）を知ってよいのは `ForecastMapper` だけにする。
+- `dataseries` のうち写せない 1 日分だけを飛ばし、利用できる日を返す。
+  `dataseries` 自体が欠けている場合、または要素があるのに 1 件も写せない場合だけ例外にする。
+  全件を写せない例外には最初の日別変換例外を cause として残し、診断情報を捨てない。
 - Repository が返すストリームは cold に保つ。呼ばれただけで通信が動き出す実装にしない。
 - 通信の失敗は `onError` としてそのまま上げる。`onErrorReturn` などで握り潰さない。
 - 契約を変えるときは `domain` の `ForecastRepository` を先に見直し、`domain-implementation` を併用する。

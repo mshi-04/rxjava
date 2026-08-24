@@ -110,6 +110,20 @@ public class ForecastActivityTest {
     }
 
     @Test
+    public void forecastScreen_loadIsPending_showsLoadingIndicator() {
+        // Arrange
+        repository.remainPending();
+
+        // Act
+        scenario = ActivityScenario.launch(ForecastActivity.class);
+
+        // Assert
+        onView(withId(R.id.loadingIndicator)).check(matches(isDisplayed()));
+        onView(withId(R.id.forecastList)).check(matches(not(isDisplayed())));
+        onView(withId(R.id.errorContainer)).check(matches(not(isDisplayed())));
+    }
+
+    @Test
     public void forecastScreen_load_requestsTokyo() {
         // Arrange
         repository.respondWith(Collections.singletonList(lightRainOnAugust16()));

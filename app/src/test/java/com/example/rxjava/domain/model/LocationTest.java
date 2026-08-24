@@ -32,6 +32,20 @@ class LocationTest {
     }
 
     @Test
+    void of_boundaryCoordinates_acceptsExactLimits() {
+        // Act
+        Location southwest = Location.of(-90, -180);
+        Location northeast = Location.of(90, 180);
+
+        // Assert
+        assertAll(
+                () -> assertEquals(-90, southwest.getLatitude()),
+                () -> assertEquals(-180, southwest.getLongitude()),
+                () -> assertEquals(90, northeast.getLatitude()),
+                () -> assertEquals(180, northeast.getLongitude()));
+    }
+
+    @Test
     void of_latitudeOutsideRange_throwsIllegalArgument() {
         // Arrange
         Executable tooFarSouth = () -> Location.of(-90.1, 0);
@@ -53,5 +67,21 @@ class LocationTest {
         assertAll(
                 () -> assertThrows(IllegalArgumentException.class, tooFarWest),
                 () -> assertThrows(IllegalArgumentException.class, tooFarEast));
+    }
+
+    @Test
+    void of_nonFiniteCoordinates_throwsIllegalArgument() {
+        // Arrange
+        Executable nanLatitude = () -> Location.of(Double.NaN, 0);
+        Executable infiniteLatitude = () -> Location.of(Double.POSITIVE_INFINITY, 0);
+        Executable nanLongitude = () -> Location.of(0, Double.NaN);
+        Executable infiniteLongitude = () -> Location.of(0, Double.NEGATIVE_INFINITY);
+
+        // Act & Assert
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class, nanLatitude),
+                () -> assertThrows(IllegalArgumentException.class, infiniteLatitude),
+                () -> assertThrows(IllegalArgumentException.class, nanLongitude),
+                () -> assertThrows(IllegalArgumentException.class, infiniteLongitude));
     }
 }
