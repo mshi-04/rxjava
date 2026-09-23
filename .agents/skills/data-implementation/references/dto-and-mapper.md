@@ -1,0 +1,50 @@
+# DTO と写像
+
+API のレスポンス構造を受け取る器（DTO）と、domain のモデルへ写す変換（Mapper）を分けて持つ。
+
+## 確認する対象
+
+- `data/remote/ForecastResponse` の `@Json` フィールドと入れ子クラス（`Temperature`, `Entry`）
+- `data/remote/ForecastMapper` の現在の変換処理
+- 対応する `app/src/test/java/com/example/rxjava/data/remote/ForecastMapperTest`
+
+## 実装時の注意
+
+- DTO（`ForecastResponse`）は Moshi が要求する `public` フィールドだけを持ち、振る舞いを持たせない。
+- `@Json(name = ...)` はキー名とフィールド名が食い違うときだけ付ける。
+  一致しているものにまで付けると、本当に読み替えが要る `temp2m` と `wind10m_max` が埋もれる。
+- 読まれないフィールドを DTO に残さない。JSON にあっても使わないなら書かない。
+- API の語彙を知ってよいのは `ForecastMapper` だけにする。天気コードの文字列や JSON のキー名を
+  他のクラスへ持ち出さない。
+- `weather` の文字列コードから `WeatherCondition` への対応表はここに持つ。未知のコードと `null` は
+  例外にせず `WeatherCondition.UNKNOWN` に落とし、通信自体は成功として扱う。
+  API が値を増やしたときにアプリが落ちるより、その日だけ天気が不明になる方がよい。
+- `date` の `20260816` のような整数は `ForecastDate.of(year, month, day)` へ分解する。
+- `temp2m` は `TemperatureRange.of(Temperature.ofCelsius(max), Temperature.ofCelsius(min))` へ、
+  `wind10m_max` は `WindSpeed.ofLevel(...)` へ写す。範囲外の値はここで例外になる。
+  壊れた値を画面まで運ぶより、その場で止める。
+- **1 日分の失敗で全体を落とさない。** `dataseries` の要素が `null` のときや、要素の
+  `date`・`temp2m`・`wind10m_max` が欠けているとき、値が範囲外のときはその日だけを飛ばす。
+  残りに写せる日があれば、それらを結果として返す。
+- `dataseries` が `null` のとき、または要素があるのに 1 件も写せなかったときは
+  `IllegalStateException` にする。空リストを成功扱いにして形の異常を隠さない。
+  全件を写せない例外の cause には最初の日別変換例外を残し、欠けた項目などを追跡できるようにする。
+  `dataseries` 自体が空リストであることは正常系として扱う。
+- 検査は入口の早期リターン（ガード節）で書き、正常系を分岐の外に出す。
+
+## テスト判断
+
+- `ForecastMapper` は Android に依存しないため、変換経路をすべて JVM Unit Test で検証する対象にする。
+  `ForecastMapperTest` を型として、正常系・未知コードの `UNKNOWN` 化・`dataseries` 欠落・
+  壊れた 1 日だけを除外する経路・全件を写せない経路のそれぞれにテストを持たせる。
+  全件を写せない経路では、例外の cause に具体的な日別変換例外が残ることも確認する。
+- 範囲外の気温や風速階級のような、値オブジェクト側で検査する境界は `domain-implementation` の
+  `value-object.md` に委ね、ここでは「例外になって止まること」までを確認する。
+
+## 検証観点
+
+- `data/remote/` の外に DTO のフィールド名や JSON のキー文字列が漏れていないか。
+- 未知の `weather` コードが例外にならず `UNKNOWN` に落ちるか。
+- 壊れた 1 日だけが除外され、他の日を返せるか。
+- `dataseries` の欠落や全件を写せない状態が例外になり、空リストや `null` へ潰れていないか。
+- 全件を写せない例外の cause に、最初の日別変換例外が保持されているか。
