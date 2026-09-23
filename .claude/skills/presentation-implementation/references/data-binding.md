@@ -27,9 +27,10 @@
     android:text="@string/forecast_retry" />
 ```
 
-- `ObservableBoolean` / `ObservableField` は `@{viewModel.loading}` の形で読む。`.get()` は書かない。
-- 読み込み中・一覧・失敗の 3 つの表示は、それぞれ独立した `View` の `visibility` を
-  `viewModel.loading` / `viewModel.hasError` の組み合わせで出し分ける。1 つの `View` で兼ねない。
+- `activity_forecast.xml` の binding 式は押下の束ねだけに使う。状態による `visibility` の
+  出し分けは Activity の `render` が行い、binding 式に状態の判定を書かない。
+- 読み込み中・一覧・失敗の 3 つの表示は、それぞれ独立した `View` にして `android:id` を付ける。
+  1 つの `View` で兼ねない。
 - 天気の表示文言のように model からそのまま文字列にできない値は、`@StringRes int` を返す
   変換関数（`ForecastFormatter.weatherLabelResId(...)`）を `<import>` し、
   binding 式の暗黙の `context` で `context.getString(...)` して解決する。
@@ -66,5 +67,5 @@ DataBinding の失敗は Java 側のエラーだけを見ても分からない�
 
 - レイアウトが参照している名前と、ViewModel / model が公開しているフィールド名が一致しているか。
 - `<layout>` で包まれていないレイアウトが混ざっていないか。
-- 読み込み中・一覧・失敗のいずれか 2 つ以上が同時に見える組み合わせが `visibility` の式に残っていないか。
+- `activity_forecast.xml` に状態を判定する binding 式が戻っていないか。
 - 画面のルートに `fitsSystemWindows` が付いているか。先頭の項目がステータスバーに隠れていないか。

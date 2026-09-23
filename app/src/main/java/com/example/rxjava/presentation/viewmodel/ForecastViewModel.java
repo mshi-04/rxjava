@@ -3,62 +3,55 @@ package com.example.rxjava.presentation.viewmodel;
 import android.util.Log;
 
 import androidx.annotation.MainThread;
-import androidx.databinding.ObservableBoolean;
 import androidx.databinding.ObservableField;
 import androidx.lifecycle.ViewModel;
 
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.Location;
 import com.example.rxjava.domain.usecase.GetForecastUseCase;
+import com.example.rxjava.presentation.util.UiSchedulers;
 
 import java.util.List;
 
 import javax.inject.Inject;
 
 import dagger.hilt.android.lifecycle.HiltViewModel;
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.disposables.Disposable;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 
 @HiltViewModel
-public class ForecastViewModel extends ViewModel {
+public final class ForecastViewModel extends ViewModel {
 
     private static final String TAG = "ForecastViewModel";
 
-    public final ObservableBoolean loading = new ObservableBoolean(false);
-    public final ObservableField<List<DailyForecast>> forecasts = new ObservableField<>();
-    public final ObservableBoolean hasError = new ObservableBoolean(false);
+    public final ObservableField<ForecastUiState> state = new ObservableField<>();
 
     private final GetForecastUseCase getForecastUseCase;
+    private final UiSchedulers schedulers;
 
     private Disposable disposable;
 
     @Inject
-    public ForecastViewModel(GetForecastUseCase getForecastUseCase) {
+    public ForecastViewModel(GetForecastUseCase getForecastUseCase, UiSchedulers schedulers) {
         this.getForecastUseCase = getForecastUseCase;
-    }
-
-    public boolean isUntouched() {
-        return forecasts.get() == null && !loading.get() && !hasError.get();
+        this.schedulers = schedulers;
+        load();
     }
 
     @MainThread
     public void load() {
         disposeCurrent();
-        hasError.set(false);
-        loading.set(true);
+        state.set(new ForecastUiState.Loading());
         disposable = getForecastUseCase.invoke(Location.TOKYO)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeOn(schedulers.background())
+                .observeOn(schedulers.main())
                 .subscribe(this::publishSuccess, this::publishError);
     }
 
     // onSuccess が投げた例外は onError へ渡らず RxJavaPlugins.onError で落ちる。
-    // forecasts.set は Activity のコールバックと Adapter まで同期的に呼ぶため、その連鎖もここで受ける
+    // state.set は Activity の render と Adapter まで同期的に呼ぶため、その連鎖もここで受ける
     private void publishSuccess(List<DailyForecast> result) {
         try {
-            loading.set(false);
-            forecasts.set(result);
+            state.set(new ForecastUiState.Success(result));
         } catch (RuntimeException failedToPublish) {
             publishError(failedToPublish);
         }
@@ -66,8 +59,7 @@ public class ForecastViewModel extends ViewModel {
 
     private void publishError(Throwable error) {
         Log.w(TAG, "予報を取得できなかった", error);
-        loading.set(false);
-        hasError.set(true);
+        state.set(new ForecastUiState.Failure());
     }
 
     private void disposeCurrent() {

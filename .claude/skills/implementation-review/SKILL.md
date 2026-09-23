@@ -67,12 +67,14 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 
 - Activity が UseCase を直接呼んでいないか。domain へのアクセスは ViewModel を通す。
 - `@AndroidEntryPoint` と `@HiltViewModel` が対で付いているか。
-- Activity に条件分岐・整形・購読が染み出していないか
-  （`OnPropertyChangedCallback` での値の橋渡しと、`viewModel.isUntouched()` による初回起動判定は例外として許す）。
-- 初回取得を `savedInstanceState` で判定していないか。プロセス death からの復帰では
-  `Bundle` が非 `null` でも ViewModel は新品なので、`isUntouched()` で判定する。
+- Activity の状態による分岐が `render` の 1 か所に集まっているか。整形と購読が染み出していないか。
+- `ForecastUiState` の全部の相を `render` が扱っているか。Java 17 ではコンパイラが網羅を検査しない。
+- 初回取得を Activity が判断していないか。取得は ViewModel のコンストラクタで始める。
 - ViewModel に `View` / `Context` が入っていないか。エラー文言を `Context` なしで組み立てようとしていないか。
-- 読み込み中・成功・失敗が独立した状態として公開され、1 つの値で兼ねていないか。
+- 画面の状態が `ForecastUiState` の 1 つの値で公開され、読み込み中・成功・失敗が別々の record になっているか。
+  `ForecastUiState` に相の判定メソッドが生えていないか。
+  真偽値のフィールドを並べて矛盾した組み合わせを作れる形に戻っていないか。
+- ViewModel が Scheduler を直接書かず、注入された `UiSchedulers` から取っているか。
 - 表示用の整形（`ForecastFormatter` が担う文言選択、`strings.xml` の書式）が domain の model へ移っていないか。
 
 ## 過剰
@@ -83,7 +85,8 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 
 ## テストと検証
 
-- 変更した振る舞いのうち、JVM で検証できるもの（`domain` の value object、`ForecastMapper`）にテストがあるか。
+- 変更した振る舞いのうち、JVM で検証できるもの（`domain` の value object、`ForecastMapper`、
+  `ForecastUiState`、`ForecastViewModel` の状態遷移）にテストがあるか。
 - 実ネットワーク呼び出しや `AndroidSchedulers.mainThread()` を伴う経路が、
   JVM Unit Test の対象として誤って扱われていないか。
 - エミュレータでしか確認できない項目が `docs/development.md` の「未確認のまま残っていること」に

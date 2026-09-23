@@ -1,6 +1,6 @@
 # presentation 層
 
-MVVM で組む。View はレイアウトを束ねるだけで、状態と処理は ViewModel が持つ。
+MVVM で組む。状態と処理は ViewModel が持ち、View は状態を受け取って描画するだけにする。
 
 ## 依存
 
@@ -15,46 +15,65 @@ MVVM で組む。View はレイアウトを束ねるだけで、状態と処理�
 
 | クラス | 役割 |
 | --- | --- |
-| `activity/ForecastActivity` | View。ランチャー。RecyclerView を組み立て、結果をアダプタへ渡す |
-| `viewmodel/ForecastViewModel` | 予報の取得と、読み込み中・成功・失敗の状態を公開する |
+| `activity/ForecastActivity` | View。ランチャー。状態を受け取り `render` で画面へ反映する |
+| `viewmodel/ForecastViewModel` | 予報の取得と、画面の状態を公開する |
+| `viewmodel/ForecastUiState` | 画面の状態。読み込み中・成功・失敗のどれか 1 つ |
 | `adapter/ForecastAdapter` | `item_forecast.xml` に `DailyForecast` を渡す |
 | `util/ForecastFormatter` | `WeatherCondition` を文字列リソース ID へ写す |
+| `util/UiSchedulers` | 取得と反映に使う Scheduler の組 |
 
 ## View の責務
 
-View がしてよいのは 3 つだけ。
+View がしてよいのは次だけ。
 
-- レイアウトを `DataBindingUtil` で束ね、変数を渡す
+- レイアウトを `DataBindingUtil` で束ね、`viewModel` を渡す
 - `RecyclerView` の `LayoutManager` と `Adapter` を設定する
+- `state` を購読し、`render(ForecastUiState)` で画面へ反映する
 - 画面遷移の `Intent` を組む
 
-条件分岐・整形・購読は書かない。
+状態による分岐は `render` の 1 か所にだけ書く。
+Kotlin の `when` による網羅に相当する場所で、相ごとの表示の出し分けと
+一覧の受け渡しがここに集まる。整形と購読は書かない。
+
+```java
+private void render(ForecastUiState state) {
+    binding.loadingIndicator.setVisibility(visibleIf(state instanceof ForecastUiState.Loading));
+    binding.forecastList.setVisibility(visibleIf(state instanceof ForecastUiState.Success));
+    binding.errorContainer.setVisibility(visibleIf(state instanceof ForecastUiState.Failure));
+    if (state instanceof ForecastUiState.Success success) {
+        adapter.submit(success.forecasts());
+    }
+}
+```
+
+Java 17 の `switch` は sealed 型の網羅を検査できない。
+相を足したときは `render` を必ず見直す。
+
 `findViewById` と `setOnClickListener` は使わない。
-ボタン押下はレイアウト側で ViewModel のメソッドへ直接束ねる。
+ビューは binding のフィールドで参照し、ボタン押下はレイアウト側で ViewModel のメソッドへ束ねる。
 
 ```xml
 <Button android:onClick="@{() -> viewModel.load()}" />
 ```
 
-初回の取得は **ViewModel がまだ何もしていないとき**だけ呼ぶ。
-`forecasts` が `null` で、`loading` も `hasError` も立っていない状態が「まだ何もしていない」である。
-
-`savedInstanceState == null` で判定してはいけない。
-ViewModel が生存するのは設定変更のときだけで、プロセスが殺されて復帰した場合は
-Bundle が非 null なのに ViewModel は新品になる。Bundle で判定すると取得が呼ばれず、
-進捗もエラーも再試行ボタンも出ない空画面で固定される。
+View は取得を始めない。取得は ViewModel の生成時に始まる。
 
 ## ViewModel の責務
 
 ViewModel は Android の View を知らない。
 `View`・`Context`・`Activity` を import した時点で誤りである。
 
-状態は `ObservableField` / `ObservableBoolean` の public final フィールドで公開し、
-DataBinding の式から直接読ませる。`LiveData` は使わない。
+状態は `ObservableField<ForecastUiState> state` の public final フィールドで公開する。
+`LiveData` は使わない。
 ライフサイクル連動の恩恵はあるが、実行中に画面を離れる想定がなく、
 購読時にメインスレッドへ移送済みのため二重の仕組みになる。
 
-UseCase は Hilt が注入する。`@HiltViewModel` を付け、コンストラクタに `@Inject` を書く。
+初回の取得はコンストラクタで始める。
+ViewModel は画面回転では生き残り、プロセス death からの復帰では作り直される。
+生成時に取得すれば、回転では取り直さず、復帰では取り直す、という区別が自然に付く。
+View が `savedInstanceState` や ViewModel の状態を見て取得を判断する必要がない。
+
+UseCase と `UiSchedulers` は Hilt が注入する。`@HiltViewModel` を付け、コンストラクタに `@Inject` を書く。
 `ViewModelProvider.Factory` は書かない。Hilt が生成する。
 Activity 側には `@AndroidEntryPoint` が要る。付け忘れると実行時に落ちる。
 
@@ -63,26 +82,41 @@ Activity 側には `@AndroidEntryPoint` が要る。付け忘れると実行時�
 
 ## 画面の状態
 
-状態を 3 つに分けて公開する。
+状態は sealed interface の `ForecastUiState` で表し、`ObservableField<ForecastUiState> state` で公開する。
 
-| 状態 | 公開する値 |
-| --- | --- |
-| 読み込み中 | `ObservableBoolean loading` |
-| 成功 | `ObservableField<List<DailyForecast>> forecasts` |
-| 失敗 | `ObservableBoolean hasError` |
+```java
+public sealed interface ForecastUiState {
 
-1 つの値で兼ねない。空リストで「読み込み中」と「結果 0 件」を兼ねると、
-利用者にも実装にも区別がつかなくなる。
+    record Loading() implements ForecastUiState {}
+
+    record Success(List<DailyForecast> forecasts) implements ForecastUiState { ... }
+
+    record Failure() implements ForecastUiState {}
+}
+```
+
+相ごとに型を分け、その相が持つ値だけを持たせる。
+一覧を持つのは `Success` だけで、「失敗なのに一覧がある」状態は作れない。
+空リストで「読み込み中」と「結果 0 件」を兼ねることもない。`Success` の空リストだけが「結果 0 件」である。
+
+真偽値のフィールドを並べて状態を表さない。`loading` と `hasError` が独立していると、
+両方が立つ組み合わせを型が防げない。
+
+相を判定するメソッド（`isLoading()` など）を `ForecastUiState` に生やさない。
+どの相かは型そのものが表しており、判定は `render` の `instanceof` で行う。
+
+`Success` はコンストラクタで `List.copyOf` を通す。null を拒み、受け取ったリストの
+あとからの変更を遮断し、変更不可にする。
 
 失敗した `Throwable` は捨てずに `Log.w` で残す。画面に出さないことと、
 原因を追えなくすることは別である。
 
 状態の更新中に例外が出る経路も塞ぐ。`subscribe(onSuccess, onError)` の `onError` は
 上流のエラー専用で、`onSuccess` が投げた例外は `RxJavaPlugins.onError` へ回りアプリが落ちる。
-`forecasts.set()` は Activity のコールバックと Adapter まで同期的に呼ぶため、
-その連鎖の失敗も失敗状態として扱う。
+`state.set()` は Activity の `render` と Adapter まで同期的に呼ぶため、
+その連鎖の失敗も `Failure` として扱う。
 
-失敗は真偽値で公開し、メッセージ文字列は ViewModel が持たない。
+`Failure` はメッセージ文字列を持たない。
 ViewModel は `Context` を持てないため文字列リソースを引けず、
 例外の `getMessage()` をそのまま出すのは読み手に意味がないうえ、
 端末の言語設定とも無関係な英文になる。
@@ -96,22 +130,28 @@ ViewModel は `Context` を持てないため文字列リソースを引けず�
 
 | きっかけ | 挙動 |
 | --- | --- |
-| 初回表示・再試行 | 既存の購読を破棄し、失敗状態を落として読み込み中にしてから購読する |
-| 成功 | 読み込み中を落とし、結果を公開する |
-| 失敗 | 読み込み中を落とし、失敗状態を立て、原因を logcat へ残す |
+| 生成・再試行 | 既存の購読を破棄し、`Loading` にしてから購読する |
+| 成功 | `Success` にして結果を渡す |
+| 失敗 | `Failure` にし、原因を logcat へ残す |
 | `onCleared()` | 購読を破棄する |
 
 `GetForecastUseCase` が返すのは素の cold ストリームなので、
-スレッドの指定はここで付ける。
+スレッドの指定はここで付ける。Scheduler は直接書かず、注入された `UiSchedulers` から取る。
 
 ```java
-getForecast.invoke(Location.TOKYO)
-        .subscribeOn(Schedulers.io())
-        .observeOn(AndroidSchedulers.mainThread())
-        .subscribe(this::handleSuccess, this::handleError);
+getForecastUseCase.invoke(Location.TOKYO)
+        .subscribeOn(schedulers.background())
+        .observeOn(schedulers.main())
+        .subscribe(this::publishSuccess, this::publishError);
 ```
 
-`AndroidSchedulers.mainThread()` を書いてよいのはこの層だけ。
+`UiSchedulers` は `background` と `main` の組を持つだけの値である。
+アプリでは `UiSchedulers.android()` が `Schedulers.io()` と
+`AndroidSchedulers.mainThread()` の組を返し、`di/SchedulerModule` がそれを提供する。
+JVM のテストでは `Schedulers.trampoline()` の組を渡し、状態遷移を同期的に検証する。
+
+`AndroidSchedulers.mainThread()` を書いてよいのはこの層だけで、`UiSchedulers.android()` の 1 か所に置く。
+`di/` の Module は `UiSchedulers.android()` を呼ぶだけで、`AndroidSchedulers` を書かない。
 
 ## 表示への写像
 
@@ -154,22 +194,21 @@ ActionBar を残すと `android:label` と画面内のタイトルが二重に�
 読み込み中・一覧・失敗の各ビューには `android:id` を付ける。
 id が無いと Espresso から名指しできず、その状態がテストで検証できなくなる。
 
-表示の出し分けは binding 式で書く。
-`<import type="android.view.View"/>` を置き、`android:visibility` を
-状態から導く。Activity 側で `setVisibility` を呼ばない。
+`activity_forecast.xml` の binding 式は再試行ボタンの押下だけに使う。
+表示の出し分けは `render` で行い、binding 式に状態の判定を書かない。
+判定が XML と Java に分かれると、相を足したときに片方を見落とす。
 
 `ForecastAdapter` は binding を使い回すため、
 値を差し替えたあとに `executePendingBindings()` を呼ぶ。
 
-一覧の反映は `ObservableField` の `OnPropertyChangedCallback` で受ける。
-DataBinding は `List` を `RecyclerView` へ直接流せないため、この橋渡しが要る。
+`state` の変更は `OnPropertyChangedCallback` で受け、`render` へ渡す。
 
-**登録直後に現在値を自分で流すこと。** コールバックは値が変わったときにしか発火しない。
+**登録直後に現在の状態を自分で `render` すること。** コールバックは値が変わったときにしか発火しない。
 画面回転で Activity だけが作り直されたとき、ViewModel は値を保持済みで変更が起きないため、
-新しい Adapter へ何も届かず一覧が空になる。
+新しい Activity に何も描画されない。
 
 コールバックは `onDestroy()` で解除する。ViewModel は Activity より長生きするので、
-解除しないと回転のたびに古い Adapter への参照が積み上がる。
+解除しないと回転のたびに古い Activity と Adapter への参照が積み上がる。
 
 一覧の差し替えは `notifyDataSetChanged()` で足りる。
 7 件の全面差し替えしか起きないため、`DiffUtil` は要らない。

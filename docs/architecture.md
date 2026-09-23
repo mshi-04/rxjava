@@ -21,8 +21,10 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 
 - 通信の詳細（Retrofit、Moshi、JSON の形）を `data` に閉じ、
   `domain` から上には RxJava の型と自前のモデルしか出さない
-- 取得結果を cold なストリームとして扱い、Scheduler の指定を `presentation` に集める
-- 読み込み中・成功・失敗を別々の状態として公開し、1 つの値で兼ねない
+- 取得結果を cold なストリームとして扱い、Scheduler の指定を `presentation` に集める。
+  Scheduler は注入し、状態遷移を JVM で検証できるようにする
+- 画面の状態を sealed interface で表し、読み込み中・成功・失敗を別々の型として持つ。
+  真偽値を並べて矛盾した組み合わせを作れる形にしない。View は状態を 1 か所で描画する
 
 ## 層と依存の向き
 
@@ -52,7 +54,7 @@ com.example.rxjava/
   domain/       model/ repository/ usecase/
   data/         remote/ repository/
   presentation/ activity/ adapter/ viewmodel/ util/
-  di/           NetworkModule RepositoryModule
+  di/           NetworkModule RepositoryModule SchedulerModule
 ```
 
 Retrofit と Moshi の型が `data/remote/` の外へ出たら、それは設計の誤りである。
@@ -94,6 +96,7 @@ Hilt を使う。`di/` の Module が生成手順を宣言し、注入は Hilt �
 | `ForecastApplication` | `@HiltAndroidApp`。コンポーネントの起点 |
 | `di/NetworkModule` | `OkHttpClient`、`Moshi`、`Retrofit`、`ForecastApi` |
 | `di/RepositoryModule` | `ForecastRepository` の実装の選択 |
+| `di/SchedulerModule` | `UiSchedulers`。中身は `UiSchedulers.android()` に任せる |
 
 `OkHttpClient` は生成コストが高く接続プールを持つため `@Singleton` で 1 つだけ作る。
 API の実装を差し替えるときは `RepositoryModule` の 1 行を変える。
@@ -108,6 +111,8 @@ API の実装を差し替えるときは `RepositoryModule` の 1 行を変え�
 
 `@Provides` が要るのは自分で `new` できない他社製の型だけで、
 `OkHttpClient`・`Moshi`・`Retrofit`・`ForecastApi` を組み立てる `NetworkModule` がそれにあたる。
+`UiSchedulers` はアプリ用とテスト用で中身が変わる値なので、コンストラクタ注入ではなく
+`SchedulerModule` の `@Provides` で作る。
 
 `javax.inject` は JSR-330 の標準アノテーションで、Dagger の実行時にも Android にも依存しない。
 層を守る目的は Android と Retrofit を内側へ入れないことなので、ここには抵触しない。

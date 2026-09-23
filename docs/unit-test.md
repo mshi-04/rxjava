@@ -17,6 +17,11 @@ Gradle は `tasks.withType<Test>().configureEach { useJUnitPlatform() }` で
 Platform を起動する。`org.junit.platform:junit-platform-launcher` が
 `testRuntimeOnly` に要る。
 
+`testOptions.unitTests.isReturnDefaultValues = true` にしている。
+JVM のテストが載せる `android.jar` は中身のないスタブで、既定では呼ぶと例外を投げる。
+`ForecastViewModel` は失敗時に `Log.w` を呼ぶため、これがないと失敗経路のテストが
+ログ出力で落ちる。Android の API の戻り値に依存する検証はここでは書かない。
+
 JUnit 4 は使わない。`org.junit.Test` と `org.junit.Assert` は残っていない。
 
 ## JVM で検証できる範囲
@@ -26,8 +31,11 @@ JUnit 4 は使わない。`org.junit.Test` と `org.junit.Assert` は残って�
 | `domain` の値オブジェクトと `DailyForecast` | できる |
 | `data` の `ForecastMapper` | できる |
 | `data` の `RemoteForecastRepository`（実通信を伴う） | しない。エミュレータで確認する |
-| `AndroidSchedulers.mainThread()` を通る経路 | できない。UI テストで見る |
-| Activity、DataBinding、`ObservableField` | できない。UI テストで見る |
+| `presentation` の `ForecastUiState` | できる |
+| `presentation` の `ForecastViewModel` の状態遷移と購読の破棄 | できる。`UiSchedulers` に trampoline の組を渡す |
+| `ForecastActivity.render` | できない。UI テストで見る |
+| `UiSchedulers.android()`（`AndroidSchedulers.mainThread()`） | できない。UI テストで見る |
+| Activity、DataBinding の式、Adapter | できない。UI テストで見る |
 
 対象外のものは [ui-test.md](ui-test.md) へ回す。
 どちらでも検証できないものは [development.md](development.md) の「未確認のまま残っていること」へ書き足す。
@@ -110,6 +118,20 @@ for ループの中で assert しない。
 
 cold であることを確かめるテストは、購読前後でカウンタが増えないこと・
 増えることを見る。
+
+## ViewModel の検証
+
+`ForecastViewModel` は本番と同じコンストラクタで組み立てる。
+`GetForecastUseCase` には手書きの fake の `ForecastRepository` を、
+`UiSchedulers` には `Schedulers.trampoline()` の組を渡す。
+
+コンストラクタが取得を始めるため、fake の応答は ViewModel を作る前に仕込む。
+
+応答の完了を操作したいときは fake が `SingleSubject` を返す。
+`onSuccess` / `onError` を呼ぶまで `Loading` に留まり、`hasObservers()` で購読の破棄を確かめられる。
+
+見るのは `state` の型と、`Success` が持つ一覧である。
+`onCleared()` は protected だが、テストは同じ package に置くため呼べる。
 
 ## 書かないもの
 

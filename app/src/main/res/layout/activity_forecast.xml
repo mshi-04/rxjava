@@ -3,8 +3,6 @@
 
     <data>
 
-        <import type="android.view.View" />
-
         <variable
             name="viewModel"
             type="com.example.rxjava.presentation.viewmodel.ForecastViewModel" />
@@ -37,15 +35,13 @@
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
                 android:paddingTop="8dp"
-                android:paddingBottom="8dp"
-                android:visibility="@{viewModel.loading || viewModel.hasError ? View.GONE : View.VISIBLE}" />
+                android:paddingBottom="8dp" />
 
             <ProgressBar
                 android:id="@+id/loadingIndicator"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:visibility="@{viewModel.loading ? View.VISIBLE : View.GONE}" />
+                android:layout_gravity="center" />
 
             <LinearLayout
                 android:id="@+id/errorContainer"
@@ -53,8 +49,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:gravity="center_horizontal"
-                android:orientation="vertical"
-                android:visibility="@{viewModel.hasError ? View.VISIBLE : View.GONE}">
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
