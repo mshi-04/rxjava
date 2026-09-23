@@ -67,6 +67,61 @@ AAA のコメントも同じく置く。
 `ActivityScenario.launch` は fake の応答を設定したあとに呼ぶ。
 起動時に取得が走るため、順序を逆にすると意図した応答にならない。
 
+## プロセス death からの復帰は手で確かめる
+
+自動テストでは再現できない。`ActivityScenario.recreate()` は ViewModel を保持するため
+設定変更しか再現せず、Bundle があるのに ViewModel が新品になる経路を通らない。
+
+エミュレータで次の順に確かめる。
+ビルドとインストールの手順は [development.md](development.md) の「エミュレータでの実行」に従う。
+
+1. アプリを起動し、一覧が出るのを待つ
+2. HOME でバックグラウンドへ回す
+3. プロセスを殺す。タスクは残る
+
+```bash
+adb shell input keyevent KEYCODE_HOME
+```
+
+```bash
+adb shell am kill com.example.rxjava
+```
+
+```bash
+adb shell pidof com.example.rxjava
+```
+
+`pidof` が何も返さなければ殺せている。
+
+4. ランチャーから起動し直す
+5. **BACK を 1 回押す**
+6. 一覧が出ることを確かめる
+
+```bash
+adb shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n com.example.rxjava/.presentation.activity.ForecastActivity
+```
+
+```bash
+adb shell input keyevent KEYCODE_BACK
+```
+
+```bash
+android layout -p
+```
+
+5 を飛ばすと確かめたい経路を通らない。`am start` で起動し直すと、
+殺される前の Activity は復元されず、その上に新しい Activity が積まれる。
+新しい Activity は Bundle を持たない通常の起動である。
+BACK でそれを閉じると、下に残っていた Activity が Bundle から作り直され、
+新品の ViewModel と組み合わさる。
+
+どちらの Activity が前面にいるかは次で見分ける。
+`Hist #0` が殺される前からある Activity で、`Resumed` がそれと一致していればよい。
+
+```bash
+adb shell dumpsys activity activities
+```
+
 ## 全件が落ちるとき
 
 `RootViewWithoutFocusException`（ウィンドウがフォーカスを得られない）で
