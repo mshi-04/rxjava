@@ -18,6 +18,7 @@ import javax.inject.Inject;
 
 import dagger.hilt.android.lifecycle.HiltViewModel;
 import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.disposables.SerialDisposable;
 
 @HiltViewModel
 public final class ForecastViewModel extends ViewModel {
@@ -60,7 +61,7 @@ public final class ForecastViewModel extends ViewModel {
     private final GetForecastUseCase getForecastUseCase;
     private final UiSchedulers schedulers;
 
-    private Disposable disposable;
+    private final SerialDisposable latestLoad = new SerialDisposable();
 
     @Inject
     public ForecastViewModel(GetForecastUseCase getForecastUseCase, UiSchedulers schedulers) {
@@ -71,12 +72,12 @@ public final class ForecastViewModel extends ViewModel {
 
     @MainThread
     public void load() {
-        disposeCurrent();
+        latestLoad.set(Disposable.disposed());
         state.set(new ForecastUiState.Loading());
-        disposable = getForecastUseCase.invoke(Location.TOKYO)
+        latestLoad.set(getForecastUseCase.invoke(Location.TOKYO)
                 .subscribeOn(schedulers.background())
                 .observeOn(schedulers.main())
-                .subscribe(this::publishSuccess, this::publishError);
+                .subscribe(this::publishSuccess, this::publishError));
     }
 
     // onSuccess が投げた例外は onError へ渡らず RxJavaPlugins.onError で落ちる。
@@ -94,15 +95,8 @@ public final class ForecastViewModel extends ViewModel {
         state.set(new ForecastUiState.Failure());
     }
 
-    private void disposeCurrent() {
-        if (disposable != null) {
-            disposable.dispose();
-            disposable = null;
-        }
-    }
-
     @Override
     protected void onCleared() {
-        disposeCurrent();
+        latestLoad.dispose();
     }
 }

@@ -255,6 +255,22 @@ class ForecastViewModelTest {
     }
 
     @Test
+    void load_afterCleared_doesNotKeepSubscription() {
+        // Arrange
+        SingleSubject<List<DailyForecast>> afterClear = SingleSubject.create();
+        repository.enqueue(SingleSubject.create());
+        repository.enqueue(afterClear);
+        ForecastViewModel viewModel = createViewModel();
+        viewModel.onCleared();
+
+        // Act
+        viewModel.load();
+
+        // Assert
+        assertFalse(afterClear.hasObservers());
+    }
+
+    @Test
     void constructor_backgroundNotTriggered_delaysStreamSubscription() {
         // Arrange
         TestScheduler background = new TestScheduler();
