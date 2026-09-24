@@ -12,6 +12,7 @@ JVM 上で動く `app/src/test/` のテストの正本。
 | フレームワーク | JUnit Jupiter 6.1.3（JUnit Platform） |
 | 実行 | `./gradlew testDebugUnitTest` |
 | モックライブラリ | mockwebserver3 5.5.0 は data 層のローカル HTTP 結合テストだけで使う。その他の fake は手書きする |
+| 依存方向の検査 | ArchUnit 1.5.0。`ArchitectureTest` だけで使う |
 
 Gradle は `tasks.withType<Test>().configureEach { useJUnitPlatform() }` で
 Platform を起動する。`org.junit.platform:junit-platform-launcher` が
@@ -33,6 +34,7 @@ JUnit 4 は使わない。`org.junit.Test` と `org.junit.Assert` は残って�
 | `data` の `RemoteForecastRepository`（ローカル HTTP サーバーを伴う） | できる。MockWebServer と実際の Retrofit・Moshi・RxJava アダプターを組み合わせる |
 | `presentation` の `ForecastUiState` | できる |
 | `presentation` の `ForecastViewModel` の状態遷移と購読の破棄 | できる。同期的な遷移には trampoline、スレッド移送と保留中の通知には独立した `TestScheduler` の組を渡す |
+| 層とパッケージの依存方向 | できる。`ArchitectureTest` が ArchUnit で本番クラスだけを読み込んで見る |
 | `ForecastActivity.render` | できない。UI テストで見る |
 | `UiSchedulers.android()`（`AndroidSchedulers.mainThread()`） | できない。UI テストで見る |
 | Activity、DataBinding の式、Adapter | できない。UI テストで見る |
@@ -149,6 +151,21 @@ URL・固定パラメータ・東京の緯度経度、JSON から domain への�
 スケジューラの境界は background と main に別々の `TestScheduler` を渡して確かめる。
 `triggerActions()` で購読と通知を個別に進め、通知が main に待機している間の
 再読み込み・破棄でも古い結果が状態を上書きしないことを見る。
+
+## 依存方向の検査
+
+`ArchitectureTest` は [architecture.md](architecture.md) の「層と依存の向き」を写したもので、
+規則の正本はあちらにある。表を変えたらこのテストも合わせて変える。
+
+ArchUnit は JUnit Jupiter の `@Test` から `ArchRule.check` を呼んで使う。
+`archunit-junit5` の `@ArchTest` は使わず、ほかのテストと同じ AAA と命名に揃える。
+
+読み込むのは本番のクラスだけにする。テストクラスは同じ package にあり、
+mockwebserver3 や Retrofit を参照するため、混ざると誤検知する。
+
+検査の対象は `domain` `data` `presentation` `di` の 4 つの package に限る。
+ルート package には `ForecastApplication` と Hilt が生成するコンポーネントが置かれ、
+生成コンポーネントは組み立てのために Retrofit や Moshi を直接参照するため、対象から外す。
 
 ## 書かないもの
 

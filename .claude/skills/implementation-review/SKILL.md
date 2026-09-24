@@ -27,11 +27,9 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 
 ## 依存方向
 
-- `presentation -> domain <- data` が崩れていないか。
-- `presentation` が `data` のクラスを参照していないか。
-- `domain` に Android SDK、RxAndroid、DataBinding、Retrofit、Moshi が入っていないか。
-- `data` に Android SDK、RxAndroid が入っていないか。
-- Retrofit と Moshi の型（`ForecastResponse` など）が `data/remote/` の外へ漏れていないか。
+- 層どうしの向き、層ごとに禁じた import、Retrofit・Moshi・`AndroidSchedulers` の置き場所は
+  `ArchitectureTest` が検査する。`./gradlew testDebugUnitTest` が通っているかを確かめ、同じ観点を目で追い直さない。
+- `ArchitectureTest` の規則を緩めたり除外を足したりしていないか。`architecture.md` の表を変えずにテストだけ変えていないか。
 - 実体の組み立てが `di/` の Module の外へ漏れていないか。
 - 自作クラスがコンストラクタ注入になっているか。`@Provides` で `new` を書いていないか。
 - インタフェースと実装の対応が `@Binds` で結ばれているか。

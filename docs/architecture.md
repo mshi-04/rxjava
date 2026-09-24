@@ -48,6 +48,12 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 | `presentation` | `domain`、Android SDK、RxAndroid、DataBinding、Hilt | `data`、Retrofit、Moshi、OkHttp |
 | `di` | すべて | — |
 
+単一モジュールのため、この表はコンパイラでは守られない。
+「してはならない」列、Retrofit と Moshi の型を `data/remote/` と `di/` の外へ出さない規則、
+`AndroidSchedulers` を `presentation` の外で使わない規則は
+`app/src/test/java/com/example/rxjava/ArchitectureTest.java` が ArchUnit で検査する。
+正本はこの表で、テストはその写しである。表を変えたらテストも合わせて変える。
+
 ```
 com.example.rxjava/
   ForecastApplication
