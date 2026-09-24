@@ -10,6 +10,8 @@ import static org.hamcrest.Matchers.not;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.fragment.app.Fragment;
 
 import com.example.rxjava.R;
 import com.example.rxjava.domain.model.DailyForecast;
@@ -29,6 +31,7 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 
@@ -54,6 +57,7 @@ public class ForecastActivityTest {
     @Before
     public void setUp() {
         hiltRule.inject();
+        repository.resetSubscriptionCount();
         // Espresso は RxJava のスレッドを待たないため、io を購読元スレッドで同期実行させる
         RxJavaPlugins.setIoSchedulerHandler(scheduler -> Schedulers.trampoline());
     }
@@ -147,6 +151,53 @@ public class ForecastActivityTest {
 
         // Assert
         onView(withText("2026年8月16日")).check(matches(isDisplayed()));
+        assertEquals(1, repository.subscriptionCount());
+    }
+
+    @Test
+    public void forecastScreen_fragmentViewRecreated_keepsForecastWithoutNewRequest() {
+        // Arrange
+        repository.respondWith(Collections.singletonList(lightRainOnAugust16()));
+        scenario = ActivityScenario.launch(ForecastActivity.class);
+        onView(withText("2026年8月16日")).check(matches(isDisplayed()));
+        AtomicReference<Fragment> fragment = new AtomicReference<>();
+
+        // Act
+        scenario.onActivity(activity -> {
+            fragment.set(activity.getSupportFragmentManager()
+                    .findFragmentById(R.id.forecastFragmentContainer));
+            activity.getSupportFragmentManager().beginTransaction().detach(fragment.get()).commitNow();
+            activity.getSupportFragmentManager().beginTransaction().attach(fragment.get()).commitNow();
+        });
+
+        // Assert
+        onView(withText("2026年8月16日")).check(matches(isDisplayed()));
+        assertEquals(1, repository.subscriptionCount());
+    }
+
+    @Test
+    public void forecastScreen_responseWhileViewDestroyed_rendersAfterAttachWithoutNewRequest() {
+        // Arrange
+        repository.remainPending();
+        scenario = ActivityScenario.launch(ForecastActivity.class);
+        onView(withId(R.id.loadingIndicator)).check(matches(isDisplayed()));
+        AtomicReference<Fragment> fragment = new AtomicReference<>();
+        scenario.onActivity(activity -> {
+            fragment.set(activity.getSupportFragmentManager()
+                    .findFragmentById(R.id.forecastFragmentContainer));
+            activity.getSupportFragmentManager().beginTransaction().detach(fragment.get()).commitNow();
+        });
+
+        // Act
+        repository.completePending(Collections.singletonList(lightRainOnAugust16()));
+        // View が無い間に main の通知を処理し、古い callback が残る不具合を隠さない
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        scenario.onActivity(activity -> activity.getSupportFragmentManager()
+                .beginTransaction().attach(fragment.get()).commitNow());
+
+        // Assert
+        onView(withText("2026年8月16日")).check(matches(isDisplayed()));
+        assertEquals(1, repository.subscriptionCount());
     }
 
     @Test

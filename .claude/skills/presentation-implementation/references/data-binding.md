@@ -1,18 +1,19 @@
 # DataBinding
 
-レイアウト側で表示と操作を完結させ、Activity にコードを書かせない。
+レイアウト側で表示と操作を完結させ、Fragment に余分な操作コードを書かせない。
 
 ## 確認する対象
 
-- `app/src/main/res/layout/activity_forecast.xml` と `item_forecast.xml`、それぞれの `<data>` ブロック
+- `app/src/main/res/layout/activity_forecast.xml`、`fragment_forecast.xml` と `item_forecast.xml`
 - `presentation/util/ForecastFormatter`（`item_forecast.xml` が呼ぶ `@StringRes int` の変換）
-- 対応する binding クラスを使っている `ForecastActivity` / `ForecastAdapter`
+- 対応する binding クラスを使っている `ForecastActivity` / `ForecastFragment` / `ForecastAdapter`
 
 ## レイアウトと変数
 
 | レイアウト | 受け取る変数 |
 | --- | --- |
-| `activity_forecast.xml` | `viewModel` |
+| `activity_forecast.xml` | なし。固定 ID の `FragmentContainerView` を置く |
+| `fragment_forecast.xml` | `viewModel` |
 | `item_forecast.xml` | `forecast` |
 
 ## 実装時の注意
@@ -27,8 +28,8 @@
     android:text="@string/forecast_retry" />
 ```
 
-- `activity_forecast.xml` の binding 式は押下の束ねだけに使う。状態による `visibility` の
-  出し分けは Activity の `render` が行い、binding 式に状態の判定を書かない。
+- `fragment_forecast.xml` の binding 式は押下の束ねだけに使う。状態による `visibility` の
+  出し分けは Fragment の `render` が行い、binding 式に状態の判定を書かない。
 - 読み込み中・一覧・失敗の 3 つの表示は、それぞれ独立した `View` にして `android:id` を付ける。
   1 つの `View` で兼ねない。
 - 天気の表示文言のように model からそのまま文字列にできない値は、`@StringRes int` を返す
@@ -46,7 +47,7 @@
   Java 側で文字列を組み立てない。
 - 文字サイズや色を直接書かず、Material 3 の theme 属性（`?attr/textAppearanceTitleMedium` など）を使う。
 - `paddingVertical` / `paddingHorizontal` は API 26 以降のため使わない。個別に書く。
-- 画面のルートには `android:fitsSystemWindows="true"` を付ける。
+- Fragment の画面ルートだけに `android:fitsSystemWindows="true"` を付ける。
   `targetSdk` 35 以上では edge-to-edge が強制され、付けないとステータスバーと
   先頭の項目が重なる。テーマは `NoActionBar` 系を使い、タイトルはレイアウト内の
   `TextView` で出す。ActionBar を残すと `android:label` と二重になる。
@@ -67,5 +68,5 @@ DataBinding の失敗は Java 側のエラーだけを見ても分からない�
 
 - レイアウトが参照している名前と、ViewModel / model が公開しているフィールド名が一致しているか。
 - `<layout>` で包まれていないレイアウトが混ざっていないか。
-- `activity_forecast.xml` に状態を判定する binding 式が戻っていないか。
-- 画面のルートに `fitsSystemWindows` が付いているか。先頭の項目がステータスバーに隠れていないか。
+- `fragment_forecast.xml` に状態を判定する binding 式が戻っていないか。
+- Fragment の画面ルートに `fitsSystemWindows` が付いているか。先頭の項目がステータスバーに隠れていないか。

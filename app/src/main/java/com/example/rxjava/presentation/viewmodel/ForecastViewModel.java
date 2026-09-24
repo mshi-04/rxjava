@@ -81,7 +81,7 @@ public final class ForecastViewModel extends ViewModel {
     }
 
     // onSuccess が投げた例外は onError へ渡らず RxJavaPlugins.onError で落ちる。
-    // state.set は Activity の render と Adapter まで同期的に呼ぶため、その連鎖もここで受ける
+    // state.set は Fragment の render と Adapter まで同期的に呼ぶため、その連鎖もここで受ける
     private void publishSuccess(List<DailyForecast> result) {
         try {
             state.set(new ForecastUiState.Success(result));

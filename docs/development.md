@@ -6,6 +6,7 @@
 | --- | --- |
 | 言語 | Java 17 |
 | UI | View (XML) + ViewDataBinding |
+| 画面ホスト | AndroidX Fragment 1.9.1 |
 | applicationId / namespace | `com.example.rxjava` |
 | AGP / Gradle | 9.0.1 / 9.1.0 |
 | compileSdk / targetSdk / minSdk | 36 / 36 / 24 |

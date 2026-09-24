@@ -1,18 +1,20 @@
-# Activity（View）
+# Activity ホストと Fragment の View
 
-レイアウトを束ね、ViewModel の状態を RecyclerView へ橋渡しするだけの薄い層に保つ。
+Activity はランチャー兼ホストに保つ。Fragment が画面の View を担う。
 
 ## 確認する対象
 
-- `presentation/activity/ForecastActivity`
-- `activity_forecast.xml` の `<data>` ブロック
+- `presentation/activity/ForecastActivity` と `presentation/fragment/ForecastFragment`
+- `activity_forecast.xml` と `fragment_forecast.xml`
 - `AndroidManifest.xml` の Activity 宣言
 
 ## 実装時の注意
 
 View がしてよいのは次だけ。
 
-- レイアウトを `DataBindingUtil.setContentView` で束ね、`viewModel` 変数を渡す
+- Activity は `DataBindingUtil.setContentView` で固定 ID の `FragmentContainerView` を持つホストを設定する。`android:name` で Fragment を指定し、手動の add、back stack、Navigation は使わない
+- Fragment は `onCreate` で `new ViewModelProvider(this)` から ViewModel を取得し、`onCreateView` で画面の binding を作る
+- Fragment は `onViewCreated` で binding に ViewModel を渡し、View ごとの Adapter を作る
 - `RecyclerView` の `LayoutManager` と `Adapter` を設定する
 - `state` の変更を `OnPropertyChangedCallback` で受け、`render(ForecastUiState)` へ渡す
 
@@ -25,10 +27,11 @@ View がしてよいのは次だけ。
 - `findViewById` と `setOnClickListener` を使わない。ビューは binding のフィールドで参照し、
   ボタン押下はレイアウト側で ViewModel のメソッドへ直接束ねる。
 - **登録直後に現在の状態を自分で `render` する。** コールバックは値が変わったときにしか発火しない。
-  回転で Activity だけが作り直されたとき、ViewModel は値を保持済みで変更が起きないため、
+  回転や Fragment の View 再生成時、ViewModel は値を保持済みで変更が起きないため、
   省くと何も描画されない。
-- コールバックは `onDestroy()` で解除する。ViewModel のほうが長生きするので、
-  解除しないと古い Activity と Adapter への参照が回転のたびに積み上がる。
+- コールバックは `onDestroyView()` で解除する。RecyclerView の Adapter を外し、
+  binding を unbind して binding、Adapter、コールバックへの参照を消す。
+  ViewModel と取得の購読はここで破棄しない。
 - 取得を始めない。取得は ViewModel の生成時に始まる。`savedInstanceState` や
   ViewModel の状態を見て `load()` を呼ぶ分岐を書かない。
 
@@ -45,12 +48,12 @@ private void render(ForecastUiState state) {
 
 ## テスト判断
 
-- Activity は JVM Unit Test で検証しない。エミュレータでの確認に回す。
+- Activity と Fragment は JVM Unit Test で検証しない。ActivityScenario と Espresso で確認する。
 
 ## 検証観点
 
 - `data` 層のクラスを import していないか。
 - 状態の分岐が `render` の外へ散っていないか。
 - `ForecastUiState` の全部の相が `render` で扱われているか。
-- Activity が `load()` を呼ぶ分岐を持っていないか。
+- Activity と Fragment が `load()` を呼ぶ分岐を持っていないか。
 - 回転後に何も描画されない経路がないか。登録直後の `render` とコールバック解除が揃っているか。

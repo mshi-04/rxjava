@@ -30,7 +30,7 @@
   そのまま状態に載せない。読み手に意味がなく、端末の言語設定とも無関係な英文が出る。
 - UseCase と `UiSchedulers` は Hilt が注入する。`@HiltViewModel` を付け、コンストラクタに `@Inject` を書く。
   `ViewModelProvider.Factory` は書かない。Hilt が生成する。
-  Activity 側の `@AndroidEntryPoint` を忘れると実行時に落ちる。
+  Activity と Fragment の `@AndroidEntryPoint` を忘れると実行時に落ちる。
 - フィールド名とメソッド名を衝突させない。`load()` メソッドと状態フィールド `load` が
   同居すると `@{viewModel.load}` の解決先が曖昧になる。
 - 資源を持つ ViewModel は `onCleared()` で必ず解放する。`ForecastViewModel` が持つ購読については
@@ -47,5 +47,5 @@
 - `data` 層のクラスを参照していないか。
 - レイアウトから参照している名前と、公開しているフィールド名が一致しているか。
 - 画面の状態が `ForecastUiState` の 1 つの値に保たれ、真偽値のフィールドが増えていないか。
-- 相を足したとき、Activity の `render` が追従しているか。
+- 相を足したとき、Fragment の `render` が追従しているか。
 - 失敗時の文言を `Context` なしで組み立てようとしていないか。

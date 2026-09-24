@@ -58,16 +58,16 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 
 - 購読が ViewModel の 1 つに集約されているか。
 - `onCleared()` で破棄されているか。
-- Activity 側で購読し直していないか（画面回転で二重になる）。
+- Fragment の View 再生成時に購読し直していないか（二重になる）。
 - 再読み込みの前に、既存の購読の破棄と状態のリセットが行われているか。
 
 ## 責務と状態
 
-- Activity が UseCase を直接呼んでいないか。domain へのアクセスは ViewModel を通す。
+- Activity や Fragment が UseCase を直接呼んでいないか。domain へのアクセスは ViewModel を通す。
 - `@AndroidEntryPoint` と `@HiltViewModel` が対で付いているか。
-- Activity の状態による分岐が `render` の 1 か所に集まっているか。整形と購読が染み出していないか。
+- Fragment の状態による分岐が `render` の 1 か所に集まっているか。整形と購読が染み出していないか。
 - `ForecastUiState` の全部の相を `render` が扱っているか。Java 17 ではコンパイラが網羅を検査しない。
-- 初回取得を Activity が判断していないか。取得は ViewModel のコンストラクタで始める。
+- 初回取得を Activity や Fragment が判断していないか。取得は ViewModel のコンストラクタで始める。
 - ViewModel に `View` / `Context` が入っていないか。エラー文言を `Context` なしで組み立てようとしていないか。
 - 画面の状態が `ForecastUiState` の 1 つの値で公開され、読み込み中・成功・失敗が別々の record になっているか。
   `ForecastUiState` に相の判定メソッドが生えていないか。

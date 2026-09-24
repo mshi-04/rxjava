@@ -15,7 +15,8 @@ MVVM で組む。状態と処理は ViewModel が持ち、View は状態を受�
 
 | クラス | 役割 |
 | --- | --- |
-| `activity/ForecastActivity` | View。ランチャー。状態を受け取り `render` で画面へ反映する |
+| `activity/ForecastActivity` | ランチャー兼ホスト。`activity_forecast.xml` を `setContentView` で設定する |
+| `fragment/ForecastFragment` | 画面の View。状態を受け取り `render` で反映する |
 | `viewmodel/ForecastViewModel` | 予報の取得と、画面の状態を公開する |
 | `viewmodel/ForecastUiState` | 画面の状態。読み込み中・成功・失敗のどれか 1 つ |
 | `adapter/ForecastAdapter` | `item_forecast.xml` に `DailyForecast` を渡す |
@@ -26,7 +27,8 @@ MVVM で組む。状態と処理は ViewModel が持ち、View は状態を受�
 
 View がしてよいのは次だけ。
 
-- レイアウトを `DataBindingUtil` で束ね、`viewModel` を渡す
+- Activity はホストのレイアウトを `DataBindingUtil.setContentView` で設定する
+- Fragment は画面の binding を `onCreateView` で作り、`viewModel` を渡す
 - `RecyclerView` の `LayoutManager` と `Adapter` を設定する
 - `state` を購読し、`render(ForecastUiState)` で画面へ反映する
 - 画面遷移の `Intent` を組む
@@ -80,7 +82,9 @@ View が `savedInstanceState` や ViewModel の状態を見て取得を判断す
 
 UseCase と `UiSchedulers` は Hilt が注入する。`@HiltViewModel` を付け、コンストラクタに `@Inject` を書く。
 `ViewModelProvider.Factory` は書かない。Hilt が生成する。
-Activity 側には `@AndroidEntryPoint` が要る。付け忘れると実行時に落ちる。
+Activity と Fragment の両方に `@AndroidEntryPoint` が要る。付け忘れると実行時に落ちる。
+ViewModel は Fragment の `onCreate` で `new ViewModelProvider(this)` から取得する。
+Fragment の View が破棄されて再生成されても ViewModel と進行中の取得は保持する。
 
 フィールド名とメソッド名を衝突させない。
 同名の状態フィールドとメソッドが同居すると、binding 式の解決先が曖昧になる。
@@ -118,7 +122,7 @@ public sealed interface ForecastUiState {
 
 状態の更新中に例外が出る経路も塞ぐ。`subscribe(onSuccess, onError)` の `onError` は
 上流のエラー専用で、`onSuccess` が投げた例外は `RxJavaPlugins.onError` へ回りアプリが落ちる。
-`state.set()` は Activity の `render` と Adapter まで同期的に呼ぶため、
+`state.set()` は Fragment の `render` と Adapter まで同期的に呼ぶため、
 その連鎖の失敗も `Failure` として扱う。
 
 `Failure` はメッセージ文字列を持たない。
@@ -182,7 +186,7 @@ JVM のテストでは `Schedulers.trampoline()` の組を渡し、状態遷移�
 
 | 対処 | 場所 |
 | --- | --- |
-| ルートに `android:fitsSystemWindows="true"` | 各画面のレイアウト |
+| ルートに `android:fitsSystemWindows="true"` | `fragment_forecast.xml` の画面ルートのみ |
 | テーマは `NoActionBar` 系 | `themes.xml` |
 | `android:windowLightStatusBar` を明暗で出し分け | `values/themes.xml` と `values-night/themes.xml` |
 
@@ -195,13 +199,14 @@ ActionBar を残すと `android:label` と画面内のタイトルが二重に�
 
 | レイアウト | 受け取る変数 |
 | --- | --- |
-| `activity_forecast.xml` | `viewModel` |
+| `activity_forecast.xml` | なし。固定 ID の `FragmentContainerView` に `android:name` で `ForecastFragment` を配置する |
+| `fragment_forecast.xml` | `viewModel` |
 | `item_forecast.xml` | `forecast` |
 
 読み込み中・一覧・失敗の各ビューには `android:id` を付ける。
 id が無いと Espresso から名指しできず、その状態がテストで検証できなくなる。
 
-`activity_forecast.xml` の binding 式は再試行ボタンの押下だけに使う。
+`fragment_forecast.xml` の binding 式は再試行ボタンの押下だけに使う。
 表示の出し分けは `render` で行い、binding 式に状態の判定を書かない。
 判定が XML と Java に分かれると、相を足したときに片方を見落とす。
 
@@ -211,11 +216,13 @@ id が無いと Espresso から名指しできず、その状態がテストで�
 `state` の変更は `OnPropertyChangedCallback` で受け、`render` へ渡す。
 
 **登録直後に現在の状態を自分で `render` すること。** コールバックは値が変わったときにしか発火しない。
-画面回転で Activity だけが作り直されたとき、ViewModel は値を保持済みで変更が起きないため、
-新しい Activity に何も描画されない。
+画面回転や Fragment の View 再生成時、ViewModel は値を保持済みで変更が起きないため、
+新しい View に何も描画されない。
 
-コールバックは `onDestroy()` で解除する。ViewModel は Activity より長生きするので、
-解除しないと回転のたびに古い Activity と Adapter への参照が積み上がる。
+コールバックは `onDestroyView()` で解除する。RecyclerView の Adapter を外し、
+binding を unbind して binding・Adapter・コールバックの参照を消す。
+ViewModel と取得の購読はここで破棄しない。View の再生成時に新しい binding と Adapter を作り、
+現在の状態を描画する。
 
 一覧の差し替えは `notifyDataSetChanged()` で足りる。
 7 件の全面差し替えしか起きないため、`DiffUtil` は要らない。
@@ -227,6 +234,6 @@ id が無いと Espresso から名指しできず、その状態がテストで�
 ## 変更するとき
 
 画面を増やすときは `presentation` の下にパッケージを 1 つ足し、
-Activity と ViewModel を対で置く。
+画面の表示は Fragment に置き、Activity はホストに保つ。
 `domain` と `data` に手を入れる必要が出たら、その画面の要求が
 表示の都合ではなくアプリの語彙の変化であることを先に確認する。

@@ -30,7 +30,7 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 
 ```
         presentation                          data
-   (Activity / ViewModel / Adapter)      (Repository 実装 / 通信)
+   (Activity / Fragment / ViewModel / Adapter) (Repository 実装 / 通信)
                   │                             │
                   └──────────┐     ┌────────────┘
                              ▼     ▼
@@ -59,7 +59,7 @@ com.example.rxjava/
   ForecastApplication
   domain/       model/ repository/ usecase/
   data/         remote/ repository/
-  presentation/ activity/ adapter/ viewmodel/ util/
+  presentation/ activity/ fragment/ adapter/ viewmodel/ util/
   di/           NetworkModule RepositoryModule SchedulerModule
 ```
 

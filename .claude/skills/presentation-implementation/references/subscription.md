@@ -25,7 +25,7 @@ latestLoad.set(getForecastUseCase.invoke(Location.TOKYO)
 
 - `AndroidSchedulers.mainThread()` を書いてよいのは `UiSchedulers.android()` だけ。
   domain、data、di には書かない。
-- 取得はコンストラクタと再試行の `load()` で始める。Activity からは始めない。
+- 取得はコンストラクタと再試行の `load()` で始める。Activity と Fragment からは始めない。
 - 再読み込みは「既存を破棄 → `Loading` にする → 購読」の順で行う。
   破棄より先に `Loading` にすると、古い購読の結果が新しい `Loading` を上書きしうる。
   `SerialDisposable.set()` は差し替えの時点でしか破棄しないため、
@@ -34,7 +34,7 @@ latestLoad.set(getForecastUseCase.invoke(Location.TOKYO)
   相が 1 つの値なので、読み込み中の表示を消し忘れる経路はない。
 - `onCleared()` で必ず破棄する。通信中に画面を離れると購読が残る。
 - 画面回転で ViewModel は生存するため、購読と状態はそのまま引き継がれる。
-  Activity 側で購読し直さない。二重購読になる。
+  Fragment の View 再生成時に購読し直さない。二重購読になる。
 
 ## テスト判断
 

@@ -1,6 +1,6 @@
 ---
 name: presentation-implementation
-description: 画面の表示、操作、遷移、表示文言を変える依頼で使う。東京の天気の presentation 層の Activity、ViewModel、RecyclerView Adapter、DataBinding レイアウト、strings.xml を担当する。
+description: 画面の表示、操作、遷移、表示文言を変える依頼で使う。東京の天気の presentation 層の Activity ホスト、Fragment、ViewModel、RecyclerView Adapter、DataBinding レイアウト、strings.xml を担当する。
 ---
 
 # 目的
@@ -21,10 +21,10 @@ description: 画面の表示、操作、遷移、表示文言を変える依頼�
 
 | 役割クラス | 参照 |
 | --- | --- |
-| Activity（View、`ForecastActivity`） | [`references/activity.md`](references/activity.md) |
+| Activity ホストと Fragment の View | [`references/activity.md`](references/activity.md) |
 | ViewModel（`ForecastViewModel`） | [`references/viewmodel.md`](references/viewmodel.md) |
 | 購読と Scheduler | [`references/subscription.md`](references/subscription.md) |
-| レイアウトと binding 式（`activity_forecast.xml` / `item_forecast.xml`） | [`references/data-binding.md`](references/data-binding.md) |
+| レイアウトと binding 式（`activity_forecast.xml` / `fragment_forecast.xml` / `item_forecast.xml`） | [`references/data-binding.md`](references/data-binding.md) |
 | RecyclerView Adapter（`ForecastAdapter`） | reference なし。`data-binding.md` の binding 使い回しの項に従う |
 | 表示文言（`ForecastFormatter` / `strings.xml`） | reference なし。`docs/presentation.md` の方針に従う |
 
@@ -44,7 +44,7 @@ description: 画面の表示、操作、遷移、表示文言を変える依頼�
 - ViewModel に `View`、`Context`、`Activity` を持ち込まない。表示文言を `strings.xml` の ID
   （`@StringRes int`）で公開し、レイアウト側の暗黙の `context` で解決する形にする。
 - `findViewById` と `setOnClickListener` を使わない。押下はレイアウト側で ViewModel へ束ねる。
-- 画面の状態は sealed interface `ForecastUiState` で表し、読み込み中・成功・失敗を別々の record にする。真偽値のフィールドを並べない。状態による分岐は Activity の `render` の 1 か所に集める。空リストで「読み込み中」と「結果 0 件」を兼ねるような実装にしない。
+- 画面の状態は sealed interface `ForecastUiState` で表し、読み込み中・成功・失敗を別々の record にする。真偽値のフィールドを並べない。状態による分岐は Fragment の `render` の 1 か所に集める。空リストで「読み込み中」と「結果 0 件」を兼ねるような実装にしない。
 - 固定色や固定文字サイズの直書きを避け、Material 3 の theme 属性を使う。
 - 表示文言は `strings.xml` に置く。例外の `getMessage()` をそのまま画面へ出さない。
 - domain / data へ波及するときは、対応する Skill を併用する。

@@ -55,6 +55,9 @@ Espresso は RxJava のスレッドを知らないため、そのままだと待
 | 成功 | 予報の日付・天気・気温が表示される |
 | 失敗 | エラー文言と再試行ボタンが表示され、一覧が出ない |
 | 再試行 | 失敗表示から再試行を押すと一覧に変わる |
+| Activity 再生成 | 表示を維持し、取得を増やさない |
+| Fragment の View 再生成 | `detach` / `attach` 後も表示を維持し、取得を増やさない |
+| View が無い間の応答 | 応答をメインスレッドで処理してから再表示し、結果を描画する |
 
 `ObservableBoolean` の値や `Disposable` の状態は検証しない。
 それらは実装の詳細であり、画面から見えるものが契約である。
@@ -66,6 +69,10 @@ AAA のコメントも同じく置く。
 
 `ActivityScenario.launch` は fake の応答を設定したあとに呼ぶ。
 起動時に取得が走るため、順序を逆にすると意図した応答にならない。
+Fragment の View を作り直すテストは、`FragmentManager` の `detach` / `attach` を
+それぞれ `commitNow()` で完了させる。View が無い間の応答では、fake を完了した後に
+メインスレッドが idle になったことを確認してから `attach` する。
+これにより破棄済み View への通知を、再表示が覆い隠さない。
 
 ## プロセス death からの復帰は手で確かめる
 
@@ -94,8 +101,9 @@ adb shell pidof com.example.rxjava
 `pidof` が何も返さなければ殺せている。
 
 4. ランチャーから起動し直す
-5. **BACK を 1 回押す**
-6. 一覧が出ることを確かめる
+5. `dumpsys activity activities` で復元された Activity と task を確認する。
+   新しい Activity が元の Activity の上に積まれた場合だけ **BACK を 1 回押す**
+6. `pidof` の値が殺す前と異なり、元の Activity で一覧が出ることを確かめる
 
 ```bash
 adb shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n com.example.rxjava/.presentation.activity.ForecastActivity
@@ -109,14 +117,14 @@ adb shell input keyevent KEYCODE_BACK
 android layout -p
 ```
 
-5 を飛ばすと確かめたい経路を通らない。`am start` で起動し直すと、
-殺される前の Activity は復元されず、その上に新しい Activity が積まれる。
-新しい Activity は Bundle を持たない通常の起動である。
-BACK でそれを閉じると、下に残っていた Activity が Bundle から作り直され、
-新品の ViewModel と組み合わさる。
+`am start` は環境によって元の task をそのまま前面に戻す場合と、
+新しい Activity を上に積む場合がある。前者では BACK を押さない。
+後者では BACK で上の Activity を閉じると、下に残っていた Activity が
+Bundle から作り直され、新品の ViewModel と組み合わさる。
 
 どちらの Activity が前面にいるかは次で見分ける。
 `Hist #0` が殺される前からある Activity で、`Resumed` がそれと一致していればよい。
+プロセス ID の変化と、表示された一覧も一緒に確認する。
 
 ```bash
 adb shell dumpsys activity activities

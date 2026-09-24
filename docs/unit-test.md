@@ -35,9 +35,9 @@ JUnit 4 は使わない。`org.junit.Test` と `org.junit.Assert` は残って�
 | `presentation` の `ForecastUiState` | できる |
 | `presentation` の `ForecastViewModel` の状態遷移と購読の破棄 | できる。同期的な遷移には trampoline、スレッド移送と保留中の通知には独立した `TestScheduler` の組を渡す |
 | 層とパッケージの依存方向 | できる。`ArchitectureTest` が ArchUnit で本番クラスだけを読み込んで見る |
-| `ForecastActivity.render` | できない。UI テストで見る |
+| `ForecastFragment.render` | できない。UI テストで見る |
 | `UiSchedulers.android()`（`AndroidSchedulers.mainThread()`） | できない。UI テストで見る |
-| Activity、DataBinding の式、Adapter | できない。UI テストで見る |
+| Activity、Fragment、DataBinding の式、Adapter | できない。UI テストで見る |
 
 対象外のものは [ui-test.md](ui-test.md) へ回す。
 どちらでも検証できないものは [development.md](development.md) の「未確認のまま残っていること」へ書き足す。
