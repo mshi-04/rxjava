@@ -23,9 +23,9 @@ import java.util.concurrent.TimeUnit;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.observers.TestObserver;
 import okhttp3.OkHttpClient;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import mockwebserver3.MockResponse;
+import mockwebserver3.MockWebServer;
+import mockwebserver3.RecordedRequest;
 import retrofit2.HttpException;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava3.RxJava3CallAdapterFactory;
@@ -61,7 +61,7 @@ class RemoteForecastRepositoryTest {
 
     @AfterEach
     void tearDown() throws IOException {
-        server.shutdown();
+        server.close();
     }
 
     @Test
@@ -78,12 +78,12 @@ class RemoteForecastRepositoryTest {
         assertNotNull(request);
         assertAll(
                 () -> assertEquals("GET", request.getMethod()),
-                () -> assertEquals("/bin/api.pl", request.getRequestUrl().encodedPath()),
-                () -> assertEquals("civillight", request.getRequestUrl().queryParameter("product")),
-                () -> assertEquals("json", request.getRequestUrl().queryParameter("output")),
-                () -> assertEquals("35.69", request.getRequestUrl().queryParameter("lat")),
-                () -> assertEquals("139.692", request.getRequestUrl().queryParameter("lon")),
-                () -> assertEquals(4, request.getRequestUrl().querySize()));
+                () -> assertEquals("/bin/api.pl", request.getUrl().encodedPath()),
+                () -> assertEquals("civillight", request.getUrl().queryParameter("product")),
+                () -> assertEquals("json", request.getUrl().queryParameter("output")),
+                () -> assertEquals("35.69", request.getUrl().queryParameter("lat")),
+                () -> assertEquals("139.692", request.getUrl().queryParameter("lon")),
+                () -> assertEquals(4, request.getUrl().querySize()));
     }
 
     @Test
@@ -116,7 +116,7 @@ class RemoteForecastRepositoryTest {
     @Test
     void find_http500_emitsHttpException() {
         // Arrange
-        server.enqueue(new MockResponse().setResponseCode(500));
+        server.enqueue(new MockResponse.Builder().code(500).build());
 
         // Act
         TestObserver<List<DailyForecast>> observer = repository.find(Location.TOKYO).test();
@@ -226,9 +226,10 @@ class RemoteForecastRepositoryTest {
     }
 
     private static MockResponse json(String body) {
-        return new MockResponse()
+        return new MockResponse.Builder()
                 .addHeader("Content-Type", "application/json")
-                .setBody(body);
+                .body(body)
+                .build();
     }
 
     private static String series(String entries) {

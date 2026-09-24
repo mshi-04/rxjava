@@ -58,7 +58,7 @@ dependencies {
     annotationProcessor(libs.hilt.compiler)
 
     testImplementation(libs.junit.jupiter)
-    testImplementation(libs.mockwebserver)
+    testImplementation(libs.mockwebserver3)
     testRuntimeOnly(libs.junit.platform.launcher)
 
     androidTestImplementation(libs.androidx.test.ext.junit)

@@ -11,7 +11,7 @@ JVM 上で動く `app/src/test/` のテストの正本。
 | --- | --- |
 | フレームワーク | JUnit Jupiter 6.1.3（JUnit Platform） |
 | 実行 | `./gradlew testDebugUnitTest` |
-| モックライブラリ | MockWebServer 4.12.0 は data 層のローカル HTTP 結合テストだけで使う。その他の fake は手書きする |
+| モックライブラリ | mockwebserver3 5.5.0 は data 層のローカル HTTP 結合テストだけで使う。その他の fake は手書きする |
 
 Gradle は `tasks.withType<Test>().configureEach { useJUnitPlatform() }` で
 Platform を起動する。`org.junit.platform:junit-platform-launcher` が
@@ -123,6 +123,10 @@ cold であることを確かめるテストは、購読前後でカウンタが
 localhost だけに接続する。Retrofit は本番と同じ `ForecastApi`、Moshi converter、
 `RxJava3CallAdapterFactory.create()` で組み立てる。通信には OkHttp の時間制限を設定し、
 リクエストの取得と `TestObserver` の終了待ちにも上限を付ける。
+テスト実行時の通信は mockwebserver3 5.5.0 に伴う OkHttp 5.5.0 を使うが、
+本番の通信は Retrofit 経由の OkHttp 4.12.0 を使う。この結合テストは
+本番と同じ API・変換・アダプターの配線を検証する一方、本番の通信ライブラリと
+完全に同じバージョンでの動作までは検証しない。
 DTO を直接作る Mapper テストだけでは、JSON の注釈や Retrofit の URL・Query の配線を
 検証できないため、HTTP の入口から Repository の戻り値までを通す。
 URL・固定パラメータ・東京の緯度経度、JSON から domain への写像、HTTP と JSON の失敗、
