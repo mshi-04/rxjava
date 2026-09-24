@@ -11,7 +11,7 @@ JVM 上で動く `app/src/test/` のテストの正本。
 | --- | --- |
 | フレームワーク | JUnit Jupiter 6.1.3（JUnit Platform） |
 | 実行 | `./gradlew testDebugUnitTest` |
-| モックライブラリ | なし。fake は手書きする |
+| モックライブラリ | MockWebServer 4.12.0 は data 層のローカル HTTP 結合テストだけで使う。その他の fake は手書きする |
 
 Gradle は `tasks.withType<Test>().configureEach { useJUnitPlatform() }` で
 Platform を起動する。`org.junit.platform:junit-platform-launcher` が
@@ -30,9 +30,9 @@ JUnit 4 は使わない。`org.junit.Test` と `org.junit.Assert` は残って�
 | --- | --- |
 | `domain` の値オブジェクトと `DailyForecast` | できる |
 | `data` の `ForecastMapper` | できる |
-| `data` の `RemoteForecastRepository`（実通信を伴う） | しない。エミュレータで確認する |
+| `data` の `RemoteForecastRepository`（ローカル HTTP サーバーを伴う） | できる。MockWebServer と実際の Retrofit・Moshi・RxJava アダプターを組み合わせる |
 | `presentation` の `ForecastUiState` | できる |
-| `presentation` の `ForecastViewModel` の状態遷移と購読の破棄 | できる。`UiSchedulers` に trampoline の組を渡す |
+| `presentation` の `ForecastViewModel` の状態遷移と購読の破棄 | できる。同期的な遷移には trampoline、スレッド移送と保留中の通知には独立した `TestScheduler` の組を渡す |
 | `ForecastActivity.render` | できない。UI テストで見る |
 | `UiSchedulers.android()`（`AndroidSchedulers.mainThread()`） | できない。UI テストで見る |
 | Activity、DataBinding の式、Adapter | できない。UI テストで見る |
@@ -119,6 +119,15 @@ for ループの中で assert しない。
 cold であることを確かめるテストは、購読前後でカウンタが増えないこと・
 増えることを見る。
 
+`RemoteForecastRepository` の結合テストは毎回 MockWebServer を起動・終了し、
+localhost だけに接続する。Retrofit は本番と同じ `ForecastApi`、Moshi converter、
+`RxJava3CallAdapterFactory.create()` で組み立てる。通信には OkHttp の時間制限を設定し、
+リクエストの取得と `TestObserver` の終了待ちにも上限を付ける。
+DTO を直接作る Mapper テストだけでは、JSON の注釈や Retrofit の URL・Query の配線を
+検証できないため、HTTP の入口から Repository の戻り値までを通す。
+URL・固定パラメータ・東京の緯度経度、JSON から domain への写像、HTTP と JSON の失敗、
+欠落・不正・空の `dataseries`、購読前と再購読時の通信回数を確認する。
+
 ## ViewModel の検証
 
 `ForecastViewModel` は本番と同じコンストラクタで組み立てる。
@@ -133,10 +142,14 @@ cold であることを確かめるテストは、購読前後でカウンタが
 見るのは `state` の型と、`Success` が持つ一覧である。
 `onCleared()` は protected だが、テストは同じ package に置くため呼べる。
 
+スケジューラの境界は background と main に別々の `TestScheduler` を渡して確かめる。
+`triggerActions()` で購読と通知を個別に進め、通知が main に待機している間の
+再読み込み・破棄でも古い結果が状態を上書きしないことを見る。
+
 ## 書かないもの
 
 - 時間に依存するテスト。`Thread.sleep` で待つテストは環境で落ちる
-- 実ネットワークを叩くテスト
+- 外部 API を叩くテスト。ローカル HTTP サーバーへの通信は許可する
 - テストのために本番コードの可視性を広げること。
   テストしたいロジックは、Android やシングルトンから切り離した位置へ寄せる
 
