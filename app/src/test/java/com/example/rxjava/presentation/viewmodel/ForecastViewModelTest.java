@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import androidx.databinding.Observable;
@@ -105,6 +106,64 @@ class ForecastViewModelTest {
 
         // Assert
         assertInstanceOf(ForecastUiState.Success.class, viewModel.state.get());
+    }
+
+    @Test
+    void state_responseCompletes_notifiesWithLatestValueAndPublicSender() {
+        // Arrange
+        SingleSubject<List<DailyForecast>> response = SingleSubject.create();
+        repository.enqueue(response);
+        ForecastViewModel viewModel = createViewModel();
+        List<ForecastUiState> observed = new ArrayList<>();
+        List<Observable> senders = new ArrayList<>();
+        List<Integer> propertyIds = new ArrayList<>();
+        viewModel.state.addOnPropertyChangedCallback(new Observable.OnPropertyChangedCallback() {
+            @Override
+            public void onPropertyChanged(Observable sender, int propertyId) {
+                observed.add(viewModel.state.get());
+                senders.add(sender);
+                propertyIds.add(propertyId);
+            }
+        });
+
+        // Act
+        response.onSuccess(Collections.singletonList(lightRainOnAugust16()));
+
+        // Assert
+        assertAll(
+                () -> assertEquals(1, observed.size()),
+                () -> assertSame(viewModel.state.get(), observed.get(0)),
+                () -> assertSame(viewModel.state, senders.get(0)),
+                () -> assertEquals(0, propertyIds.get(0)));
+    }
+
+    @Test
+    void state_callbackRegisteredAndRemoved_readsCurrentWithoutNotification() {
+        // Arrange
+        SingleSubject<List<DailyForecast>> response = SingleSubject.create();
+        repository.enqueue(response);
+        ForecastViewModel viewModel = createViewModel();
+        AtomicInteger notifications = new AtomicInteger();
+        Observable.OnPropertyChangedCallback callback = new Observable.OnPropertyChangedCallback() {
+            @Override
+            public void onPropertyChanged(Observable sender, int propertyId) {
+                notifications.incrementAndGet();
+            }
+        };
+
+        // Act
+        viewModel.state.addOnPropertyChangedCallback(callback);
+        ForecastUiState initialState = viewModel.state.get();
+        int notificationsAtRegistration = notifications.get();
+        viewModel.state.removeOnPropertyChangedCallback(callback);
+        response.onSuccess(Collections.singletonList(lightRainOnAugust16()));
+
+        // Assert
+        assertAll(
+                () -> assertInstanceOf(ForecastUiState.Loading.class, initialState),
+                () -> assertEquals(0, notificationsAtRegistration),
+                () -> assertInstanceOf(ForecastUiState.Success.class, viewModel.state.get()),
+                () -> assertEquals(0, notifications.get()));
     }
 
     @Test

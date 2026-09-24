@@ -11,7 +11,11 @@
 ## 実装時の注意
 
 - `View`、`Context`、`Activity` を import した時点で誤り。
-- 状態は `ObservableField<ForecastUiState> state` の `public final` フィールドで公開する。
+- 状態は `ReadOnlyForecastState state` の `public final` フィールドで公開する。
+  `ReadOnlyForecastState` は `Observable` を実装し、公開 API は `get()` と
+  `OnPropertyChangedCallback` の登録・解除だけにする。更新は ViewModel に閉じる。
+  同じ参照への更新は通知せず、値を先に差し替えてから `PropertyChangeRegistry` で同期通知する。
+  sender は公開した `state` 自身、property ID は `0` にする。
   `LiveData` は使わない。ライフサイクル連動の恩恵はあるが、実行中に画面を離れる想定がなく、
   購読時にメインスレッドへ移送済みのため二重の仕組みになる。
 - 読み込み中・成功・失敗は sealed interface `ForecastUiState` の別々の record として表す。
@@ -27,7 +31,7 @@
 - UseCase と `UiSchedulers` は Hilt が注入する。`@HiltViewModel` を付け、コンストラクタに `@Inject` を書く。
   `ViewModelProvider.Factory` は書かない。Hilt が生成する。
   Activity 側の `@AndroidEntryPoint` を忘れると実行時に落ちる。
-- フィールド名とメソッド名を衝突させない。`load()` メソッドと `ObservableField<...> load` が
+- フィールド名とメソッド名を衝突させない。`load()` メソッドと状態フィールド `load` が
   同居すると `@{viewModel.load}` の解決先が曖昧になる。
 - 資源を持つ ViewModel は `onCleared()` で必ず解放する。`ForecastViewModel` が持つ購読については
   `subscription.md` を正本とする。破棄の順序と Scheduler の指定はここで重複させない。

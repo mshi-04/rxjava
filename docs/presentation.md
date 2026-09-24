@@ -63,7 +63,12 @@ View は取得を始めない。取得は ViewModel の生成時に始まる。
 ViewModel は Android の View を知らない。
 `View`・`Context`・`Activity` を import した時点で誤りである。
 
-状態は `ObservableField<ForecastUiState> state` の public final フィールドで公開する。
+状態は `ReadOnlyForecastState state` の public final フィールドで公開する。
+この型は `ForecastViewModel` 内の `public static final` なクラスで、`Observable` を実装する。
+公開する操作は現在値を返す `get()` と、`OnPropertyChangedCallback` の登録・解除だけにする。
+値の更新は ViewModel だけが行い、画面から変更できないようにする。
+更新時は同じ参照なら通知せず、値を先に差し替えてから `PropertyChangeRegistry` で同期的に通知する。
+通知の sender は公開した `state` 自身、property ID は `0` とする。
 `LiveData` は使わない。
 ライフサイクル連動の恩恵はあるが、実行中に画面を離れる想定がなく、
 購読時にメインスレッドへ移送済みのため二重の仕組みになる。
@@ -78,11 +83,11 @@ UseCase と `UiSchedulers` は Hilt が注入する。`@HiltViewModel` を付け
 Activity 側には `@AndroidEntryPoint` が要る。付け忘れると実行時に落ちる。
 
 フィールド名とメソッド名を衝突させない。
-同名の `ObservableField` とメソッドが同居すると、binding 式の解決先が曖昧になる。
+同名の状態フィールドとメソッドが同居すると、binding 式の解決先が曖昧になる。
 
 ## 画面の状態
 
-状態は sealed interface の `ForecastUiState` で表し、`ObservableField<ForecastUiState> state` で公開する。
+状態は sealed interface の `ForecastUiState` で表し、読み取り専用の `state` で公開する。
 
 ```java
 public sealed interface ForecastUiState {
