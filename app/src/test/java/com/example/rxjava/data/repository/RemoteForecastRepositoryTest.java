@@ -40,6 +40,8 @@ class RemoteForecastRepositoryTest {
 
     private MockWebServer server;
     private RemoteForecastRepository repository;
+    private long now = 100_000_000L;
+    private FakeForecastStore store;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -56,7 +58,8 @@ class RemoteForecastRepositoryTest {
                 .addConverterFactory(MoshiConverterFactory.create(new Moshi.Builder().build()))
                 .addCallAdapterFactory(RxJava3CallAdapterFactory.create())
                 .build();
-        repository = new RemoteForecastRepository(retrofit.create(ForecastApi.class));
+        store = new FakeForecastStore();
+        repository = new RemoteForecastRepository(retrofit.create(ForecastApi.class), store, () -> now);
     }
 
     @AfterEach
@@ -213,6 +216,7 @@ class RemoteForecastRepositoryTest {
         TestObserver<List<DailyForecast>> first = stream.test();
         first.awaitDone(5, TimeUnit.SECONDS).assertComplete().assertNoErrors();
         int afterFirstSubscription = server.getRequestCount();
+        now += 86_400_000L;
         TestObserver<List<DailyForecast>> second = stream.test();
         second.awaitDone(5, TimeUnit.SECONDS).assertComplete().assertNoErrors();
 
@@ -223,6 +227,291 @@ class RemoteForecastRepositoryTest {
                 () -> assertEquals(2, server.getRequestCount()),
                 () -> assertEquals(16, first.values().get(0).get(0).getDate().getDay()),
                 () -> assertEquals(17, second.values().get(0).get(0).getDate().getDay()));
+    }
+
+
+    @Test
+    void find_freshCache_returnsSavedForecastWithoutCommunication() {
+        // Arrange
+        saveStored(Location.TOKYO, java.util.Collections.emptyList(), now - 86_399_999L);
+        // Act
+        TestObserver<List<DailyForecast>> observer = repository.find(Location.TOKYO).test();
+        // Assert
+        observer.assertComplete().assertValue(List::isEmpty);
+        assertEquals(0, server.getRequestCount());
+    }
+
+    @Test
+    void find_exactly24HoursOld_fetchesAndSaves() {
+        // Arrange
+        saveStored(Location.TOKYO, java.util.Collections.emptyList(), now - 86_400_000L);
+        server.enqueue(json(series(FIRST)));
+        // Act
+        repository.find(Location.TOKYO).test().awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        // Assert
+        assertAll(() -> assertEquals(1, server.getRequestCount()),
+                () -> assertEquals(now, readStored(Location.TOKYO).lastFetchedAt()),
+                () -> assertEquals(16, readStored(Location.TOKYO).forecasts().get(0).getDate().getDay()));
+    }
+
+    @Test
+    void find_futureTimestamp_fetchesAgain() {
+        // Arrange
+        saveStored(Location.TOKYO, java.util.Collections.emptyList(), now + 1);
+        server.enqueue(json(series(FIRST)));
+        // Act
+        repository.find(Location.TOKYO).test().awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        // Assert
+        assertEquals(1, server.getRequestCount());
+    }
+
+    @Test
+    void find_expiredCacheAndHttpFailure_preservesTimestamp() {
+        // Arrange
+        long previous = now - 86_400_001L;
+        saveStored(Location.TOKYO, java.util.Collections.emptyList(), previous);
+        server.enqueue(new MockResponse.Builder().code(500).build());
+        // Act
+        repository.find(Location.TOKYO).test().awaitDone(5, TimeUnit.SECONDS).assertError(HttpException.class);
+        // Assert
+        assertEquals(previous, readStored(Location.TOKYO).lastFetchedAt());
+    }
+
+    @Test
+    void find_saveFailure_emitsErrorAndPreservesCache() {
+        // Arrange
+        long previous = now - 86_400_000L;
+        saveStored(Location.TOKYO, java.util.Collections.emptyList(), previous);
+        store.saveFailure = new IllegalStateException("save failed");
+        server.enqueue(json(series(FIRST)));
+        // Act
+        repository.find(Location.TOKYO).test().awaitDone(5, TimeUnit.SECONDS).assertError(store.saveFailure);
+        // Assert
+        assertEquals(previous, readStored(Location.TOKYO).lastFetchedAt());
+    }
+
+    @Test
+    void find_readFailure_emitsErrorWithoutCommunication() {
+        // Arrange
+        store.readFailure = new IllegalStateException("read failed");
+        // Act
+        TestObserver<List<DailyForecast>> observer = repository.find(Location.TOKYO).test();
+        // Assert
+        observer.assertError(store.readFailure);
+        assertEquals(0, server.getRequestCount());
+    }
+
+    @Test
+    void find_sameStreamSubscribedAgain_readsFreshCache() {
+        // Arrange
+        server.enqueue(json(series(FIRST)));
+        Single<List<DailyForecast>> stream = repository.find(Location.TOKYO);
+        // Act
+        int readsBefore = store.reads;
+        stream.test().awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        stream.test().awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        // Assert
+        assertAll(() -> assertEquals(0, readsBefore),
+                () -> assertEquals(2, store.reads),
+                () -> assertEquals(1, server.getRequestCount()));
+    }
+
+    @Test
+    void find_otherLocation_doesNotUseTokyoCache() {
+        // Arrange
+        saveStored(Location.TOKYO, java.util.Collections.emptyList(), now);
+        Location other = Location.of(34, 135);
+        server.enqueue(json(series(SECOND)));
+        // Act
+        repository.find(other).test().awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        // Assert
+        assertAll(() -> assertEquals(1, server.getRequestCount()),
+                () -> assertTrue(readStored(Location.TOKYO).forecasts().isEmpty()),
+                () -> assertEquals(17, readStored(other).forecasts().get(0).getDate().getDay()));
+    }
+
+    @Test
+    void find_emptyResponse_savesTimestampAndAvoidsNextCommunication() {
+        // Arrange
+        server.enqueue(json(series("")));
+        // Act
+        repository.find(Location.TOKYO).test().awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        repository.find(Location.TOKYO).test().assertComplete().assertValue(List::isEmpty);
+        // Assert
+        assertAll(() -> assertEquals(now, readStored(Location.TOKYO).lastFetchedAt()),
+                () -> assertEquals(1, server.getRequestCount()));
+    }
+
+    @Test
+    void find_completedResponse_usesTimeImmediatelyBeforeSave() {
+        // Arrange
+        RemoteForecastRepository delayed = new RemoteForecastRepository((latitude, longitude) -> {
+            now += 5000;
+            com.example.rxjava.data.remote.ForecastResponse response = new com.example.rxjava.data.remote.ForecastResponse();
+            response.dataseries = java.util.Collections.emptyList();
+            return Single.just(response);
+        }, store, () -> now);
+        long start = now;
+        // Act
+        delayed.find(Location.TOKYO).test().assertComplete();
+        // Assert
+        assertEquals(start + 5000, readStored(Location.TOKYO).lastFetchedAt());
+    }
+
+
+    @Test
+    void find_freshNonemptyCache_returnsStoredForecast() {
+        // Arrange
+        server.enqueue(json(series(FIRST)));
+        TestObserver<List<DailyForecast>> first = repository.find(Location.TOKYO).test();
+        first.awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        List<DailyForecast> saved = first.values().get(0);
+        now += 86_399_999L;
+        // Act
+        TestObserver<List<DailyForecast>> observer = repository.find(Location.TOKYO).test();
+        // Assert
+        observer.assertComplete().assertValue(saved);
+        assertEquals(1, server.getRequestCount());
+    }
+
+    @Test
+    void find_expiredNonemptyCache_refreshesForecasts() {
+        // Arrange
+        server.enqueue(json(series(FIRST)));
+        repository.find(Location.TOKYO).test().awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        now += 86_400_001L;
+        server.enqueue(json(series(SECOND)));
+        // Act
+        repository.find(Location.TOKYO).test().awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        // Assert
+        assertAll(() -> assertEquals(2, server.getRequestCount()),
+                () -> assertEquals(17, readStored(Location.TOKYO).forecasts().get(0).getDate().getDay()),
+                () -> assertEquals(now, readStored(Location.TOKYO).lastFetchedAt()));
+    }
+
+    @Test
+    void find_expiredCacheAndMappingFailure_preservesPreviousForecastAndTimestamp() {
+        // Arrange
+        server.enqueue(json(series(FIRST)));
+        repository.find(Location.TOKYO).test().awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        long previous = now;
+        now += 86_400_000L;
+        server.enqueue(json("{}"));
+        // Act
+        repository.find(Location.TOKYO).test().awaitDone(5, TimeUnit.SECONDS).assertError(IllegalStateException.class);
+        // Assert
+        assertAll(() -> assertEquals(previous, readStored(Location.TOKYO).lastFetchedAt()),
+                () -> assertEquals(16, readStored(Location.TOKYO).forecasts().get(0).getDate().getDay()));
+    }
+
+
+
+    @Test
+    void find_savePending_emitsResultOnlyAfterSaveCompletes() {
+        // Arrange
+        io.reactivex.rxjava3.subjects.CompletableSubject gate = io.reactivex.rxjava3.subjects.CompletableSubject.create();
+        store.saveGate = gate;
+        repository = immediateRepository();
+        // Act
+        TestObserver<List<DailyForecast>> observer = repository.find(Location.TOKYO).test();
+        observer.assertNoValues().assertNotComplete();
+        boolean saving = gate.hasObservers();
+        gate.onComplete();
+        // Assert
+        assertTrue(saving);
+        observer.assertComplete().assertNoErrors();
+        assertEquals(16, observer.values().get(0).get(0).getDate().getDay());
+        assertEquals(1, store.saves);
+    }
+
+    @Test
+    void find_pendingSaveFails_emitsErrorWithoutSuccess() {
+        // Arrange
+        io.reactivex.rxjava3.subjects.CompletableSubject gate = io.reactivex.rxjava3.subjects.CompletableSubject.create();
+        store.saveGate = gate;
+        RuntimeException error = new IllegalStateException("delayed save failed");
+        repository = immediateRepository();
+        // Act
+        TestObserver<List<DailyForecast>> observer = repository.find(Location.TOKYO).test();
+        gate.onError(error);
+        // Assert
+        observer.assertError(error).assertNoValues().assertNotComplete();
+        assertEquals(0, store.saves);
+    }
+
+    @Test
+    void find_disposedWhileSaving_disposesSaveAndDoesNotPublishResult() {
+        // Arrange
+        io.reactivex.rxjava3.subjects.CompletableSubject gate = io.reactivex.rxjava3.subjects.CompletableSubject.create();
+        store.saveGate = gate;
+        repository = immediateRepository();
+        // Act
+        TestObserver<List<DailyForecast>> observer = repository.find(Location.TOKYO).test();
+        observer.dispose();
+        boolean stillSubscribed = gate.hasObservers();
+        gate.onComplete();
+        // Assert
+        assertTrue(!stillSubscribed);
+        observer.assertNoValues().assertNotComplete();
+        assertEquals(0, store.saves);
+    }
+
+    @Test
+    void find_readPending_checksExpirationWhenReadCompletes() {
+        // Arrange
+        long timestamp = now;
+        io.reactivex.rxjava3.subjects.SingleSubject<ForecastStore.Snapshot> read =
+                io.reactivex.rxjava3.subjects.SingleSubject.create();
+        store.readOverride = read;
+        server.enqueue(json(series(FIRST)));
+        // Act
+        TestObserver<List<DailyForecast>> observer = repository.find(Location.TOKYO).test();
+        observer.assertNoValues().assertNotComplete();
+        now += 86_400_000L;
+        read.onSuccess(new ForecastStore.Snapshot(java.util.Collections.emptyList(), timestamp));
+        // Assert
+        observer.awaitDone(5, TimeUnit.SECONDS).assertComplete();
+        assertEquals(1, server.getRequestCount());
+    }
+
+    @Test
+    void readAndSave_beforeSubscription_doesNotAccessFakeStore() {
+        // Arrange
+        Single<ForecastStore.Snapshot> read = store.read(Location.TOKYO);
+        io.reactivex.rxjava3.core.Completable save = store.save(Location.TOKYO, java.util.Collections.emptyList(), now);
+        // Act
+        int readsBefore = store.reads;
+        int savesBefore = store.saves;
+        save.test().assertComplete();
+        read.test().assertComplete();
+        // Assert
+        assertAll(() -> assertEquals(0, readsBefore), () -> assertEquals(0, savesBefore),
+                () -> assertEquals(1, store.reads), () -> assertEquals(1, store.saves));
+    }
+
+
+    private RemoteForecastRepository immediateRepository() {
+        com.example.rxjava.data.remote.ForecastResponse response = new com.example.rxjava.data.remote.ForecastResponse();
+        com.example.rxjava.data.remote.ForecastResponse.Entry entry = new com.example.rxjava.data.remote.ForecastResponse.Entry();
+        entry.date = 20260816;
+        entry.weather = "clear";
+        entry.maxWind = 2;
+        entry.temperature = new com.example.rxjava.data.remote.ForecastResponse.Temperature();
+        entry.temperature.max = 30;
+        entry.temperature.min = 20;
+        response.dataseries = java.util.Collections.singletonList(entry);
+        return new RemoteForecastRepository((latitude, longitude) -> Single.just(response), store, () -> now);
+    }
+
+    private ForecastStore.Snapshot readStored(Location location) {
+        TestObserver<ForecastStore.Snapshot> observer = store.read(location).test();
+        observer.awaitDone(5, TimeUnit.SECONDS).assertComplete().assertNoErrors();
+        return observer.values().get(0);
+    }
+
+    private void saveStored(Location location, List<DailyForecast> forecasts, long timestamp) {
+        store.save(location, forecasts, timestamp).test()
+                .awaitDone(5, TimeUnit.SECONDS).assertComplete().assertNoErrors();
     }
 
     private static MockResponse json(String body) {

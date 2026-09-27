@@ -4,6 +4,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
@@ -49,13 +50,38 @@ class ArchitectureTest {
         ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data..")
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "android..",
-                        "androidx..",
                         "io.reactivex.rxjava3.android..",
                         "com.example.rxjava.presentation..");
 
         // Act
         Executable check = () -> rule.check(PRODUCTION_CLASSES);
 
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
+    void dataOutsideLocal_doesNotDependOnAndroidX() {
+        // Arrange
+        ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data..")
+                .and().resideOutsideOfPackage("com.example.rxjava.data.local..")
+                .should().dependOnClassesThat().resideInAPackage("androidx..");
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
+    void local_doesNotDependOnUnrelatedAndroidX() {
+        // Arrange
+        ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data.local..")
+                .should().dependOnClassesThat(JavaClass.Predicates.resideInAPackage("androidx..")
+                        .and(com.tngtech.archunit.base.DescribedPredicate.not(
+                                JavaClass.Predicates.resideInAnyPackage(
+                                        "androidx.room..", "androidx.sqlite..", "androidx.annotation.."))));
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
         // Assert
         assertDoesNotThrow(check);
     }

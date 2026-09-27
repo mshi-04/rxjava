@@ -2,6 +2,10 @@
 
 ## 技術構成
 
+永続化は Room 2.8.5（Java annotationProcessor）を使用する。
+Room Gradle プラグインで `app/schemas/` に DB バージョン 1 のスキーマを出力し、git 管理する。
+更新判定は初回取得・再試行時だけで、画面復帰やバックグラウンドの定期通信は行わない。
+
 | 項目 | 値 |
 | --- | --- |
 | 言語 | Java 17 |
@@ -172,3 +176,5 @@ android docs fetch "kb://..."
 - コミットメッセージは日本語、件名は「〜する」の形
 - 改行コードは `.gitattributes` で LF に統一。`*.bat` のみ CRLF
 - ビルド成果物・`local.properties`・署名鍵はコミットしない
+
+Room の RxJava 3 対応には room-rxjava3 2.8.5 を使用する。

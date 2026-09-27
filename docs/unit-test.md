@@ -27,6 +27,11 @@ JUnit 4 は使わない。`org.junit.Test` と `org.junit.Assert` は残って�
 
 ## JVM で検証できる範囲
 
+RemoteForecastRepository のキャッシュ判定は手書き ForecastStore fake と可変の時刻取得処理で
+未取得、24 時間の境界、未来の日時、地点の独立性、空一覧、保存・読み取り失敗を検証する。
+Room の実際の保存・復元・順序・置換・ロールバックは instrumented test で検証する。
+再購読時もキャッシュ判定を行い、期限内であれば追加の通信はしない。
+
 | 対象 | 判断 |
 | --- | --- |
 | `domain` の値オブジェクトと `DailyForecast` | できる |
@@ -132,7 +137,7 @@ localhost だけに接続する。Retrofit は本番と同じ `ForecastApi`、Mo
 DTO を直接作る Mapper テストだけでは、JSON の注釈や Retrofit の URL・Query の配線を
 検証できないため、HTTP の入口から Repository の戻り値までを通す。
 URL・固定パラメータ・東京の緯度経度、JSON から domain への写像、HTTP と JSON の失敗、
-欠落・不正・空の `dataseries`、購読前と再購読時の通信回数を確認する。
+欠落・不正・空の `dataseries`、購読前、期限内の再購読、期限切れ後の再購読時の通信回数を確認する。
 
 ## ViewModel の検証
 
@@ -178,3 +183,9 @@ mockwebserver3 や Retrofit を参照するため、混ざると誤検知する�
 
 追加せずに、理由とともに報告する。
 モックライブラリを入れる前に、手書きの fake で足りないかを確認する。
+
+## 非同期ストアの検証
+
+fake の read/save も購読時に動く Single/Completable にする。
+保存保留中に成功を返さないこと、保存失敗と購読破棄の伝播、
+読み取り完了時の日時判定と保存購読直前の日時取得を TestObserver と Subject で検証する。

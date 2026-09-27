@@ -1,4 +1,5 @@
 plugins {
+    alias(libs.plugins.room)
     alias(libs.plugins.android.application)
     alias(libs.plugins.hilt)
 }
@@ -41,6 +42,9 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.rxjava3)
+    annotationProcessor(libs.androidx.room.compiler)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.fragment)
     implementation(libs.androidx.lifecycle.viewmodel)
@@ -73,4 +77,8 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }

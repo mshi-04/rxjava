@@ -7,7 +7,7 @@
 
 | import してよい | してはならない |
 | --- | --- |
-| `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp | Android SDK、RxAndroid、Hilt 固有の型、`presentation` |
+| `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp。`local` のみ Room・AndroidX SQLite・AndroidX annotation | Android SDK、その他の AndroidX、RxAndroid、Hilt 固有の型、`presentation` |
 
 Repository 実装はコンストラクタに `@Inject` を付ける。
 インタフェースとの対応は `di/RepositoryModule` の `@Binds` が結ぶ。
@@ -92,7 +92,24 @@ DTO から `domain` のモデルへ写す。ここが唯一、API の語彙を�
 
 ## RemoteForecastRepository
 
-API 呼び出しに `map` で `ForecastMapper` をつなぐだけに保つ。
+`RemoteForecastRepository` が Room のキャッシュ判定、API 通信、保存を担当する。
+`find(Location)` の購読時に最終取得日時と予報をそれぞれのテーブルから読み取り、
+日時が存在して現在以下かつ経過時間が 24 時間未満なら保存済み予報を返す。
+未取得、24 時間以上経過、未来の日時の場合は API へ通信する。
+
+`local/` に Entity、DAO、Database、`RoomForecastStore` を置く。
+Room と AndroidX SQLite への依存はこのパッケージだけに許可し、
+Android SDK と Context は持ち込まない。DB の生成は `di/DatabaseModule` が行う。
+Repository は Android 非依存の `ForecastStore` と `TimeProvider` を受け取る。
+
+`forecasts` は緯度・経度・一覧内の順序を複合主キーとし、変換済みの
+日付、天気区分、最高／最低気温、風速階級を保存する。
+`last_fetched_at` は緯度・経度を複合主キーとし、最終取得成功日時を
+Unix 時刻のミリ秒で保存する。空一覧も日時があれば取得済みとして扱う。
+対象地点の予報置換・日時更新は同じトランザクションで行う。
+日時は API 取得と写像の成功後、保存直前に取得する。
+通信・写像・保存の失敗時は古い予報へのフォールバックを行わず、
+保存済み予報と日時を維持する。読み取りの失敗も onError として返す。
 
 cold であり、購読するまで通信しない。Scheduler も指定しない。
 失敗はそのまま `onError` として上げ、握り潰さない。
@@ -103,3 +120,16 @@ API を差し替えるときは `ForecastRepository` の別実装を作り、
 `di/RepositoryModule` の 1 行を変える。`domain` と `presentation` は触らない。
 
 `remote/` の DTO と Mapper はその実装専用であり、他から参照させない。
+
+## Room の非同期アクセス
+
+`ForecastStore.read` は cold な `Single<Snapshot>`、`save` は cold な `Completable` を返す。
+DAO は LastFetchedAt を Maybe、Forecast の一覧を Single で個別に読む。
+日時が存在しない場合は未取得の Snapshot、存在する場合は予報一覧を読み取った Snapshot を返す。
+取得済みの空一覧と未取得は日時の有無で区別する。読み取りは二つのクエリであり、
+両クエリの間に別の保存が完了した場合にはその更新後の予報を読むことがある。
+Room-rxjava3 が読み取りを Room の実行基盤へ移す。保存は Completable.fromAction で
+既存の同期 DAO トランザクションを包み、Room の transaction executor 上で実行する。
+この DB 内部の実行指定だけは local の責務とし、通信開始と UI 通知は presentation が指定する。
+Repository は flatMap で日時判定と通信をつなぎ、保存完了後にだけ予報を返す。
+保存日時は保存ストリームの購読直前に取得する。本番コードで blocking 呼び出しは使わない。

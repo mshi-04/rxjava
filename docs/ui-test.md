@@ -7,6 +7,10 @@ JVM で完結するテストは [unit-test.md](unit-test.md) を参照。
 
 ## 構成
 
+RoomForecastStore の instrumented test ではテスト専用のファイル DB を使い、
+予報と最終取得日時の復元、一覧順序、地点別の置換、保存失敗時のロールバックを確認する。
+ネットワークは使わず、既存の AndroidJUnit4 ランナーで実行する。
+
 | 項目 | 値 |
 | --- | --- |
 | フレームワーク | JUnit 4 + Espresso |
@@ -153,3 +157,5 @@ android emulator create Pixel_10
 
 `android emulator start --cold <名前>` でスナップショットを捨てて起動する手もあるが、
 この症状に効くかは確かめていない。
+
+Room の非同期 read/save は TestObserver で購読し、終了待ちを 5 秒に制限する。

@@ -21,7 +21,7 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 
 - 通信の詳細（Retrofit、Moshi、JSON の形）を `data` に閉じ、
   `domain` から上には RxJava の型と自前のモデルしか出さない
-- 取得結果を cold なストリームとして扱い、Scheduler の指定を `presentation` に集める。
+- 取得結果を cold なストリームとして扱い、通信開始と UI 通知の Scheduler 指定を `presentation` に集める。
   Scheduler は注入し、状態遷移を JVM で検証できるようにする
 - 画面の状態を sealed interface で表し、読み込み中・成功・失敗を別々の型として持つ。
   真偽値を並べて矛盾した組み合わせを作れる形にしない。View は状態を 1 か所で描画する
@@ -44,7 +44,7 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 | 層 | import してよい | してはならない |
 | --- | --- | --- |
 | `domain` | `io.reactivex.rxjava3.core`、`javax.inject`、標準 Java | Android SDK、RxAndroid、Retrofit、Moshi、`data`、`presentation` |
-| `data` | `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp | Android SDK、RxAndroid、`presentation` |
+| `data` | `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp。`local` のみ Room・AndroidX SQLite・AndroidX annotation | Android SDK、その他の AndroidX、RxAndroid、`presentation` |
 | `presentation` | `domain`、Android SDK、RxAndroid、DataBinding、Hilt | `data`、Retrofit、Moshi、OkHttp |
 | `di` | すべて | — |
 
@@ -58,7 +58,7 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 com.example.rxjava/
   ForecastApplication
   domain/       model/ repository/ usecase/
-  data/         remote/ repository/
+  data/         remote/ repository/ local/
   presentation/ activity/ fragment/ adapter/ viewmodel/ util/
   di/           NetworkModule RepositoryModule SchedulerModule
 ```
@@ -107,6 +107,12 @@ Hilt を使う。`di/` の Module が生成手順を宣言し、注入は Hilt �
 `OkHttpClient` は生成コストが高く接続プールを持つため `@Singleton` で 1 つだけ作る。
 API の実装を差し替えるときは `RepositoryModule` の 1 行を変える。
 
+永続化には Room を使う。data/local に限って Room と AndroidX SQLite を許可し、
+それ以外の AndroidX と Android SDK への依存は禁止する。
+Context を使う DB 生成は di/DatabaseModule に置く。
+RemoteForecastRepository が取得時の 24 時間判定を行い、Room の保存済み予報か
+API の取得結果を返す。予報と最終取得日時は別テーブルへ原子的に保存する。
+
 ### コンストラクタ注入を使う
 
 自分たちが書いたクラスは、コンストラクタに `@Inject` を付けて Hilt に組み立てさせる。
@@ -122,3 +128,10 @@ API の実装を差し替えるときは `RepositoryModule` の 1 行を変え�
 
 `javax.inject` は JSR-330 の標準アノテーションで、Dagger の実行時にも Android にも依存しない。
 層を守る目的は Android と Retrofit を内側へ入れないことなので、ここには抵触しない。
+
+## 永続化の非同期境界
+
+ForecastStore の読み取りは Single、保存は Completable とする。
+Room-rxjava3 の単発クエリと、Room transaction executor 上の保存で DB 操作を完結させる。
+local に限り DB 実行基盤への subscribeOn を許可し、Repository は Scheduler を指定しない。
+通信開始と UI 通知の Scheduler は引き続き presentation が指定する。
