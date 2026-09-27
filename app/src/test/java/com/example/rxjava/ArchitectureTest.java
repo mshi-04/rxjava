@@ -1,16 +1,24 @@
 package com.example.rxjava;
 
+import static com.tngtech.archunit.base.DescribedPredicate.not;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
-import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+
+import dagger.Binds;
+import dagger.Module;
+import dagger.Provides;
+import dagger.hilt.InstallIn;
 
 class ArchitectureTest {
 
@@ -66,8 +74,10 @@ class ArchitectureTest {
         ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data..")
                 .and().resideOutsideOfPackage("com.example.rxjava.data.local..")
                 .should().dependOnClassesThat().resideInAPackage("androidx..");
+
         // Act
         Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
         // Assert
         assertDoesNotThrow(check);
     }
@@ -76,12 +86,13 @@ class ArchitectureTest {
     void local_doesNotDependOnUnrelatedAndroidX() {
         // Arrange
         ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data.local..")
-                .should().dependOnClassesThat(JavaClass.Predicates.resideInAPackage("androidx..")
-                        .and(com.tngtech.archunit.base.DescribedPredicate.not(
-                                JavaClass.Predicates.resideInAnyPackage(
-                                        "androidx.room..", "androidx.sqlite..", "androidx.annotation.."))));
+                .should().dependOnClassesThat(resideInAPackage("androidx..")
+                        .and(not(resideInAnyPackage(
+                                "androidx.room..", "androidx.sqlite..", "androidx.annotation.."))));
+
         // Act
         Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
         // Assert
         assertDoesNotThrow(check);
     }
@@ -114,6 +125,74 @@ class ArchitectureTest {
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "retrofit2..",
                         "com.squareup.moshi..");
+
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
+    void remoteTypes_outsideDataRemoteDatasourceAndDi_areNotReferenced() {
+        // Arrange
+        ArchRule rule = noClasses().that().resideInAnyPackage(
+                        "com.example.rxjava.domain..",
+                        "com.example.rxjava.data..",
+                        "com.example.rxjava.presentation..")
+                .and().resideOutsideOfPackages(
+                        "com.example.rxjava.data.remote..",
+                        "com.example.rxjava.data.datasource..")
+                .should().dependOnClassesThat().resideInAPackage("com.example.rxjava.data.remote..");
+
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
+    void localTypes_outsideDataLocalAndDi_areNotReferenced() {
+        // Arrange
+        ArchRule rule = noClasses().that().resideInAnyPackage(
+                        "com.example.rxjava.domain..",
+                        "com.example.rxjava.data..",
+                        "com.example.rxjava.presentation..")
+                .and().resideOutsideOfPackage("com.example.rxjava.data.local..")
+                .should().dependOnClassesThat().resideInAPackage("com.example.rxjava.data.local..");
+
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
+    void domainAndData_declareNoHiltModules() {
+        // Arrange
+        ArchRule rule = noClasses().that().resideInAnyPackage(
+                        "com.example.rxjava.domain..",
+                        "com.example.rxjava.data..")
+                .should().beAnnotatedWith(Module.class)
+                .orShould().beAnnotatedWith(InstallIn.class);
+
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
+    void domainAndData_declareNoProvidesOrBindsMethods() {
+        // Arrange
+        ArchRule rule = noMethods().that().areDeclaredInClassesThat().resideInAnyPackage(
+                        "com.example.rxjava.domain..",
+                        "com.example.rxjava.data..")
+                .should().beAnnotatedWith(Provides.class)
+                .orShould().beAnnotatedWith(Binds.class);
 
         // Act
         Executable check = () -> rule.check(PRODUCTION_CLASSES);
