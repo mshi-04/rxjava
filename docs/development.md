@@ -2,10 +2,6 @@
 
 ## 技術構成
 
-永続化は Room 2.8.5（Java annotationProcessor）を使用する。
-Room Gradle プラグインで `app/schemas/` に DB バージョン 1 のスキーマを出力し、git 管理する。
-更新判定は初回取得・再試行時だけで、画面復帰やバックグラウンドの定期通信は行わない。
-
 | 項目 | 値 |
 | --- | --- |
 | 言語 | Java 17 |
@@ -16,6 +12,7 @@ Room Gradle プラグインで `app/schemas/` に DB バージョン 1 のスキ
 | compileSdk / targetSdk / minSdk | 36 / 36 / 24 |
 | Rx | RxJava 3.1.12, RxAndroid 3.0.2 |
 | 通信 | Retrofit 3.0.0, Moshi 1.15.2, OkHttp（Retrofit 経由） |
+| 永続化 | Room 2.8.5（annotationProcessor）、room-rxjava3 2.8.5。スキーマは Room Gradle プラグインで `app/schemas/` に出力し git 管理する |
 | DI | Hilt 2.60.1（Java なので annotationProcessor。KSP は使わない） |
 | JVM Unit Test | JUnit Jupiter 6.1.3（JUnit Platform）、ArchUnit 1.5.0（依存方向の検査） |
 | UI テスト | Espresso 3.7.0 + Hilt testing。方針は [ui-test.md](ui-test.md) |
@@ -72,8 +69,10 @@ Java 側のエラーだけを見ても分からないことが多い。
 
 - ダークテーマの表示。`values-night/themes.xml` で `windowLightStatusBar` を
   出し分けているが、実機で見ていない
-- 成功後に予報を取り直す手段が無い。再試行ボタンは失敗時にしか出ないため、
-  一度表示できると force-stop するまで更新できない。既知の制約であって不具合ではない
+- 成功後に予報を取り直す手段が無い。再試行ボタンは失敗時にしか出ず、
+  取得の判定は初回表示と再試行のときだけ行う。画面復帰やバックグラウンドでは取り直さない。
+  取得から 24 時間は保存済みの予報を返すため、force-stop しても更新されない。
+  既知の制約であって不具合ではない
 
 ## release ビルドは対象外
 
@@ -83,6 +82,10 @@ Java 側のエラーだけを見ても分からないことが多い。
 minify を有効にすると Moshi が `ForecastResponse` のフィールドを
 リフレクションで読めなくなるため、`-keep` 規則が要る。
 配布する必要が出たときに初めて書く。
+
+同じ理由で、Room の migration は用意しない。
+スキーマを変えるときは DB バージョン 1 のまま `app/schemas/` の JSON を上書きし、
+開発端末ではアプリのデータを消してから起動する。
 
 ## ビルドの設定
 
@@ -176,5 +179,3 @@ android docs fetch "kb://..."
 - コミットメッセージは日本語、件名は「〜する」の形
 - 改行コードは `.gitattributes` で LF に統一。`*.bat` のみ CRLF
 - ビルド成果物・`local.properties`・署名鍵はコミットしない
-
-Room の RxJava 3 対応には room-rxjava3 2.8.5 を使用する。

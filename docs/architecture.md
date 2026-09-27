@@ -44,28 +44,45 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 | 層 | import してよい | してはならない |
 | --- | --- | --- |
 | `domain` | `io.reactivex.rxjava3.core`、`javax.inject`、標準 Java | Android SDK、RxAndroid、Retrofit、Moshi、`data`、`presentation` |
-| `data` | `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp。`local` のみ Room・AndroidX SQLite・AndroidX annotation | Android SDK、その他の AndroidX、RxAndroid、`presentation` |
+| `data` | `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp。`local` のみ Room・AndroidX SQLite・AndroidX annotation | Android SDK、その他の AndroidX、RxAndroid、Hilt の Module 注釈（`@Module` `@Provides` `@Binds`）、`presentation` |
 | `presentation` | `domain`、Android SDK、RxAndroid、DataBinding、Hilt | `data`、Retrofit、Moshi、OkHttp |
 | `di` | すべて | — |
 
-単一モジュールのため、この表はコンパイラでは守られない。
-「してはならない」列、Retrofit と Moshi の型を `data/remote/` と `di/` の外へ出さない規則、
+`data` の内側にも境界がある。
+
+| package | 参照してよいのは |
+| --- | --- |
+| `data/remote`（`ForecastApi`、DTO、`ForecastMapper`） | `data/remote`、`data/datasource`、`di` |
+| `data/datasource`（`ForecastDataSource`、`ForecastDataSourceImpl`） | `data` と `di` |
+| `data/local`（`dao/`、`entity/`、`ForecastDatabase`、`ForecastEntityMapper`、`ForecastStoreImpl`） | `data/local` と `di` |
+| `data/repository`（`ForecastStore`、`TimeProvider`、`CachingForecastRepository`） | `data` と `di` |
+
+通信は `datasource` が口の `ForecastDataSource` と実装を持ち、実装だけが `remote` を使う。
+保存は `repository` が口の `ForecastStore` を定め、`local` が実装する。
+`CachingForecastRepository` は 2 つの口だけに依存し、`remote` も `local` も知らない。
+組み合わせは `di` が決める。
+
+単一モジュールのため、これらの表はコンパイラでは守られない。
+「してはならない」列、`data` 内の境界、Retrofit と Moshi の型を `data/remote/` と `di/` の外へ出さない規則、
 `AndroidSchedulers` を `presentation` の外で使わない規則は
 `app/src/test/java/com/example/rxjava/ArchitectureTest.java` が ArchUnit で検査する。
+Hilt の Module 注釈は生成コードが参照する `dagger.internal` と区別するため、
+package ではなく注釈を対象に検査する。
 正本はこの表で、テストはその写しである。表を変えたらテストも合わせて変える。
 
 ```
 com.example.rxjava/
   ForecastApplication
   domain/       model/ repository/ usecase/
-  data/         remote/ repository/ local/
+  data/         remote/ datasource/ repository/ local/（dao/ entity/）
   presentation/ activity/ fragment/ adapter/ viewmodel/ util/
-  di/           NetworkModule RepositoryModule SchedulerModule
+  di/           NetworkModule DatabaseModule RepositoryModule SchedulerModule
 ```
 
 Retrofit と Moshi の型が `data/remote/` の外へ出たら、それは設計の誤りである。
+Room の Entity が `data/local/` の外へ出た場合も同じである。
 `ForecastRepository` が返すのは `domain` のモデルだけで、
-API のレスポンス DTO や JSON の項目名は境界の内側に残す。
+API のレスポンス DTO、JSON の項目名、テーブルの行は境界の内側に残す。
 
 ## 中心にある設計
 
@@ -101,22 +118,19 @@ Hilt を使う。`di/` の Module が生成手順を宣言し、注入は Hilt �
 | --- | --- |
 | `ForecastApplication` | `@HiltAndroidApp`。コンポーネントの起点 |
 | `di/NetworkModule` | `OkHttpClient`、`Moshi`、`Retrofit`、`ForecastApi` |
-| `di/RepositoryModule` | `ForecastRepository` の実装の選択 |
+| `di/DatabaseModule` | `ForecastDatabase`。`Context` を使う生成はここだけに置く |
+| `di/RepositoryModule` | `ForecastRepository`・`ForecastDataSource`・`ForecastStore` の実装の選択と `TimeProvider` |
 | `di/SchedulerModule` | `UiSchedulers`。中身は `UiSchedulers.android()` に任せる |
 
 `OkHttpClient` は生成コストが高く接続プールを持つため `@Singleton` で 1 つだけ作る。
-API の実装を差し替えるときは `RepositoryModule` の 1 行を変える。
-
-永続化には Room を使う。data/local に限って Room と AndroidX SQLite を許可し、
-それ以外の AndroidX と Android SDK への依存は禁止する。
-Context を使う DB 生成は di/DatabaseModule に置く。
-RemoteForecastRepository が取得時の 24 時間判定を行い、Room の保存済み予報か
-API の取得結果を返す。予報と最終取得日時は別テーブルへ原子的に保存する。
+API の実装を差し替えるときは `RepositoryModule` の `ForecastDataSource` の 1 行を変える。
+キャッシュ判定はそのまま残る。
 
 ### コンストラクタ注入を使う
 
 自分たちが書いたクラスは、コンストラクタに `@Inject` を付けて Hilt に組み立てさせる。
-`RemoteForecastRepository`、`GetForecastUseCase`、`ForecastViewModel` が該当する。
+`CachingForecastRepository`、`ForecastDataSourceImpl`、`ForecastStoreImpl`、
+`GetForecastUseCase`、`ForecastViewModel` が該当する。
 
 インタフェースと実装の対応は `RepositoryModule` の `@Binds` で結ぶ。
 `@Binds` は abstract メソッドの宣言だけで済み、`@Provides` より生成コードが小さい。
@@ -125,13 +139,35 @@ API の取得結果を返す。予報と最終取得日時は別テーブルへ�
 `OkHttpClient`・`Moshi`・`Retrofit`・`ForecastApi` を組み立てる `NetworkModule` がそれにあたる。
 `UiSchedulers` はアプリ用とテスト用で中身が変わる値なので、コンストラクタ注入ではなく
 `SchedulerModule` の `@Provides` で作る。
+`ForecastDatabase` は `Room.databaseBuilder` でしか作れないため `DatabaseModule` の `@Provides` で作る。
+`TimeProvider` は `System::currentTimeMillis` を渡すだけなので、実装クラスを作らず
+`RepositoryModule` の static `@Provides` で作る。
 
 `javax.inject` は JSR-330 の標準アノテーションで、Dagger の実行時にも Android にも依存しない。
 層を守る目的は Android と Retrofit を内側へ入れないことなので、ここには抵触しない。
 
-## 永続化の非同期境界
+## 永続化とキャッシュ
 
-ForecastStore の読み取りは Single、保存は Completable とする。
-Room-rxjava3 の単発クエリと、Room transaction executor 上の保存で DB 操作を完結させる。
-local に限り DB 実行基盤への subscribeOn を許可し、Repository は Scheduler を指定しない。
+取得した予報は Room に保存し、24 時間はそれを返す。
+配置は 3 つに分ける。
+
+| 役割 | インタフェース | 実装 |
+| --- | --- | --- |
+| 通信と写像 | `datasource/ForecastDataSource` | `datasource/ForecastDataSourceImpl` |
+| 保存と復元 | `repository/ForecastStore` | `local/ForecastStoreImpl` |
+| キャッシュ判定 | `ForecastRepository`（domain） | `repository/CachingForecastRepository` |
+
+`CachingForecastRepository` は `ForecastDataSource`・`ForecastStore`・`TimeProvider` だけに依存し、
+Retrofit も Room も知らない。キャッシュ判定は fake だけで JVM で検証できる。
+
+### 非同期境界
+
+`ForecastStore` の読み取りは `Maybe`、保存は `Completable` とし、どちらも cold にする。
+`Maybe` の empty が「未取得」を表す。未取得を `null` や空リストで表さない。
+Room-rxjava3 の単発クエリと、Room の transaction executor 上の保存で DB 操作を完結させる。
+`data/local` に限り DB 実行基盤への `subscribeOn` を許可する。
+`repository` と `remote` は Scheduler を指定しない。
 通信開始と UI 通知の Scheduler は引き続き presentation が指定する。
+
+保存した値が domain へ写せないとき、読み取りは `onError` になり通信へは進まない。
+壊れたキャッシュを未取得として扱うと、データの異常に気づけなくなる。

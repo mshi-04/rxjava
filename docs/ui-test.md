@@ -7,10 +7,6 @@ JVM で完結するテストは [unit-test.md](unit-test.md) を参照。
 
 ## 構成
 
-RoomForecastStore の instrumented test ではテスト専用のファイル DB を使い、
-予報と最終取得日時の復元、一覧順序、地点別の置換、保存失敗時のロールバックを確認する。
-ネットワークは使わず、既存の AndroidJUnit4 ランナーで実行する。
-
 | 項目 | 値 |
 | --- | --- |
 | フレームワーク | JUnit 4 + Espresso |
@@ -65,6 +61,25 @@ Espresso は RxJava のスレッドを知らないため、そのままだと待
 
 `ObservableBoolean` の値や `Disposable` の状態は検証しない。
 それらは実装の詳細であり、画面から見えるものが契約である。
+
+## ForecastStoreImpl を実際の DB で検証する
+
+画面ではないが、実際の SQLite を要するためここに置く。
+`ForecastStoreImplTest` はテストごとに一意な名前のファイル DB を作り、終了時に消す。
+ネットワークは使わず、`AndroidJUnit4` ランナーで実行する。
+
+| 対象 | 見るもの |
+| --- | --- |
+| 復元 | DB を開き直しても全フィールドと一覧の順序が戻る |
+| 置換 | 同じ地点の保存は前の行を消し、他の地点の行は残す |
+| 空一覧 | 取得済みの空一覧と未取得（empty）を区別する |
+| ロールバック | 日時の書き込みが失敗したら予報の置換も戻る |
+| cold | 購読するまで DB を開かない |
+| 入力のコピー | `save` を呼んだ後で呼び出し元が一覧を変えても、保存内容は変わらない |
+| 開始前の解除 | 実行を保留する transaction executor を渡し、実行前に解除すると何も書かれない |
+| 開始後の解除 | トランザクションの途中で解除しても通知はなく、予報と日時が両方とも更新される |
+
+read と save は `TestObserver` で購読し、終了待ちを 5 秒に制限する。
 
 ## 書き方
 
@@ -157,5 +172,3 @@ android emulator create Pixel_10
 
 `android emulator start --cold <名前>` でスナップショットを捨てて起動する手もあるが、
 この症状に効くかは確かめていない。
-
-Room の非同期 read/save は TestObserver で購読し、終了待ちを 5 秒に制限する。
