@@ -1,6 +1,6 @@
 ---
 name: data-implementation
-description: 7Timer! API との通信、DTO と写像、Room による保存、Repository 実装を変える依頼で使う。東京の天気の data 層の Retrofit インタフェース、Moshi DTO、ForecastMapper、ForecastDataSourceImpl、Room の Entity・DAO・ForecastStoreImpl、CachingForecastRepository を担当する。
+description: 7Timer! API との通信、DTO と写像、Room による保存、Repository 実装を変える依頼で使う。東京の天気の data 層の Retrofit インタフェース、Moshi DTO、RemoteForecastMapper、ForecastRemoteDataSourceImpl、Room の Entity・DAO・ForecastLocalDataSourceImpl、ForecastRepositoryImpl を担当する。
 ---
 
 # 目的
@@ -22,10 +22,10 @@ description: 7Timer! API との通信、DTO と写像、Room による保存、R
 
 | 役割クラス | 参照 |
 | --- | --- |
-| Retrofit インタフェースと通信の口（`ForecastApi` / `ForecastDataSourceImpl`） | [`references/retrofit-api.md`](references/retrofit-api.md) |
-| DTO と写像（`ForecastResponse` / `ForecastMapper`） | [`references/dto-and-mapper.md`](references/dto-and-mapper.md) |
-| Room による保存（Entity / `ForecastDao` / `ForecastEntityMapper` / `ForecastStoreImpl`） | [`references/room-store.md`](references/room-store.md) |
-| Repository implementation（`CachingForecastRepository`） | [`references/repository-implementation.md`](references/repository-implementation.md) |
+| Retrofit インタフェースと通信の口（`ForecastApi` / `ForecastRemoteDataSourceImpl`） | [`references/retrofit-api.md`](references/retrofit-api.md) |
+| DTO と写像（`ForecastResponse` / `RemoteForecastMapper`） | [`references/dto-and-mapper.md`](references/dto-and-mapper.md) |
+| Room による保存（Entity / `ForecastDao` / `ForecastEntityMapper` / `ForecastLocalDataSourceImpl`） | [`references/room-store.md`](references/room-store.md) |
+| Repository implementation（`ForecastRepositoryImpl`） | [`references/repository-implementation.md`](references/repository-implementation.md) |
 
 # 手順
 
@@ -42,15 +42,15 @@ description: 7Timer! API との通信、DTO と写像、Room による保存、R
 
 - data 層に `Context`、`View`、RxAndroid（`AndroidSchedulers`）を持ち込まない。
   表示のためのスレッド移送は presentation が付ける。
-- Retrofit と Moshi の型を `data/remote/` の外へ、Room の Entity を `data/local/` の外へ出さない。
-  `data/remote/` を参照してよいのは `ForecastDataSourceImpl`（`data/datasource/`）と `di/` だけにする。
+- Retrofit と Moshi の型を `data/remote/` の外へ、Room の Entity と DAO を `data/db/` と `data/datasource/` の外へ出さない。
+  `data/remote/` を参照してよいのは `ForecastRemoteDataSourceImpl`（`data/datasource/`）、`RemoteForecastMapper`（`data/util/`）、`di/` だけにする。
   `ForecastResponse` や JSON の項目名、テーブルの行が Repository の戻り値に現れたら境界が漏れている。
-- DB 実行基盤への `subscribeOn` は `data/local/` だけに許す。`repository/`・`datasource/`・`remote/` は Scheduler を指定しない。
-- API の語彙（天気コードの文字列、JSON のキー名）を知ってよいのは `ForecastMapper` だけにする。
+- DB 実行基盤への `subscribeOn` は `ForecastLocalDataSourceImpl` だけに許す。それ以外の data は Scheduler を指定しない。
+- API の語彙（天気コードの文字列、JSON のキー名）を知ってよいのは `RemoteForecastMapper` だけにする。
 - `dataseries` のうち写せない 1 日分だけを飛ばし、利用できる日を返す。
   `dataseries` 自体が欠けている場合、または要素があるのに 1 件も写せない場合だけ例外にする。
   全件を写せない例外には最初の日別変換例外を cause として残し、診断情報を捨てない。
-- Repository、`ForecastDataSource`、`ForecastStore` が返すストリームは cold に保つ。
+- Repository、`ForecastRemoteDataSource`、`ForecastLocalDataSource` が返すストリームは cold に保つ。
   呼ばれただけで通信や DB 操作が動き出す実装にしない。
 - 通信の失敗は `onError` としてそのまま上げる。`onErrorReturn` などで握り潰さない。
 - 契約を変えるときは `domain` の `ForecastRepository` を先に見直し、`domain-implementation` を併用する。

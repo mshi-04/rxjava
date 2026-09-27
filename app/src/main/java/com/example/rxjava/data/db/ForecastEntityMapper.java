@@ -1,7 +1,7 @@
-package com.example.rxjava.data.local;
+package com.example.rxjava.data.db;
 
-import com.example.rxjava.data.local.entity.ForecastEntity;
-import com.example.rxjava.data.local.entity.LastFetchedAtEntity;
+import com.example.rxjava.data.db.entity.ForecastEntity;
+import com.example.rxjava.data.db.entity.LastFetchedAtEntity;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.ForecastDate;
 import com.example.rxjava.domain.model.Location;
@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-final class ForecastEntityMapper {
+public final class ForecastEntityMapper {
 
     private static final Map<WeatherCondition, String> STORED_WEATHER = storedWeather();
     private static final Map<String, WeatherCondition> CONDITIONS = conditions(STORED_WEATHER);
@@ -25,7 +25,7 @@ final class ForecastEntityMapper {
     private ForecastEntityMapper() {
     }
 
-    static List<DailyForecast> toDomain(List<ForecastEntity> rows) {
+    public static List<DailyForecast> toDomain(List<ForecastEntity> rows) {
         List<DailyForecast> forecasts = new ArrayList<>(rows.size());
         for (ForecastEntity row : rows) {
             forecasts.add(toDailyForecast(row));
@@ -33,7 +33,7 @@ final class ForecastEntityMapper {
         return Collections.unmodifiableList(forecasts);
     }
 
-    static List<ForecastEntity> toEntities(Location location, List<DailyForecast> forecasts) {
+    public static List<ForecastEntity> toEntities(Location location, List<DailyForecast> forecasts) {
         List<ForecastEntity> rows = new ArrayList<>(forecasts.size());
         for (int position = 0; position < forecasts.size(); position++) {
             rows.add(toEntity(location, position, forecasts.get(position)));
@@ -41,7 +41,7 @@ final class ForecastEntityMapper {
         return rows;
     }
 
-    static LastFetchedAtEntity toLastFetchedAtEntity(Location location, long fetchedAtMillis) {
+    public static LastFetchedAtEntity toLastFetchedAtEntity(Location location, long fetchedAtMillis) {
         LastFetchedAtEntity row = new LastFetchedAtEntity();
         row.latitude = location.getLatitude();
         row.longitude = location.getLongitude();

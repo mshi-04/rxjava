@@ -5,7 +5,7 @@
 ## 確認する対象
 
 - `domain/model/` の `Temperature`, `TemperatureRange`, `WindSpeed`, `ForecastDate`, `Location`
-- それぞれを生成している `data/remote/ForecastMapper` と、`Location.TOKYO` を使う `presentation/viewmodel/ForecastViewModel`
+- それぞれを生成している `data/util/RemoteForecastMapper` と、`Location.TOKYO` を使う `presentation/viewmodel/ForecastViewModel`
 
 ## 実装時の注意
 
@@ -30,5 +30,5 @@
 ## 検証観点
 
 - 生の `int` や `String` のまま受け渡している箇所が残っていないか。
-- 値の妥当性検査が呼び出し側（`ForecastMapper` など）に散っていないか。
+- 値の妥当性検査が呼び出し側（`RemoteForecastMapper` など）に散っていないか。
 - 境界値が API の公称範囲そのものになっていないか（意図的に緩めているか）。

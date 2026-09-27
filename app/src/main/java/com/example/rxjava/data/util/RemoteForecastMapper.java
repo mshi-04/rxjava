@@ -1,5 +1,6 @@
-package com.example.rxjava.data.remote;
+package com.example.rxjava.data.util;
 
+import com.example.rxjava.data.remote.ForecastResponse;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.ForecastDate;
 import com.example.rxjava.domain.model.Temperature;
@@ -13,11 +14,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class ForecastMapper {
+public final class RemoteForecastMapper {
 
     private static final Map<String, WeatherCondition> CONDITIONS = conditions();
 
-    private ForecastMapper() {
+    private RemoteForecastMapper() {
     }
 
     public static List<DailyForecast> toDailyForecasts(ForecastResponse response) {

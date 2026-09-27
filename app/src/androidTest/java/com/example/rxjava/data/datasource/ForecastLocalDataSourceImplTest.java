@@ -1,4 +1,4 @@
-package com.example.rxjava.data.local;
+package com.example.rxjava.data.datasource;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
-import com.example.rxjava.data.repository.ForecastStore;
+import com.example.rxjava.data.db.ForecastDatabase;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.ForecastDate;
 import com.example.rxjava.domain.model.Location;
@@ -45,7 +45,7 @@ import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.observers.TestObserver;
 
 @RunWith(AndroidJUnit4.class)
-public class ForecastStoreImplTest {
+public class ForecastLocalDataSourceImplTest {
 
     private static final Location OTHER_LOCATION = Location.of(34, 135);
 
@@ -55,7 +55,7 @@ public class ForecastStoreImplTest {
     private String databaseName;
     private ExecutorService queryExecutor;
     private ForecastDatabase database;
-    private ForecastStoreImpl store;
+    private ForecastLocalDataSourceImpl store;
 
     @Before
     public void setUp() {
@@ -80,7 +80,7 @@ public class ForecastStoreImplTest {
         // Act
         database.close();
         openDatabase(databaseBuilder());
-        ForecastStore.Snapshot snapshot = readStored(Location.TOKYO);
+        ForecastLocalDataSource.Snapshot snapshot = readStored(Location.TOKYO);
 
         // Assert
         DailyForecast restored = snapshot.forecasts().get(0);
@@ -106,8 +106,8 @@ public class ForecastStoreImplTest {
         saveStored(Location.TOKYO, Collections.singletonList(forecast(19)), 300);
 
         // Assert
-        ForecastStore.Snapshot tokyo = readStored(Location.TOKYO);
-        ForecastStore.Snapshot other = readStored(OTHER_LOCATION);
+        ForecastLocalDataSource.Snapshot tokyo = readStored(Location.TOKYO);
+        ForecastLocalDataSource.Snapshot other = readStored(OTHER_LOCATION);
         assertEquals(1, tokyo.forecasts().size());
         assertEquals(19, tokyo.forecasts().get(0).getDate().getDay());
         assertEquals(300, tokyo.fetchedAtMillis());
@@ -124,7 +124,7 @@ public class ForecastStoreImplTest {
         saveStored(Location.TOKYO, Collections.emptyList(), 200);
 
         // Assert
-        ForecastStore.Snapshot tokyo = readStored(Location.TOKYO);
+        ForecastLocalDataSource.Snapshot tokyo = readStored(Location.TOKYO);
         assertTrue(tokyo.forecasts().isEmpty());
         assertEquals(200, tokyo.fetchedAtMillis());
         assertUnfetched(OTHER_LOCATION);
@@ -133,10 +133,10 @@ public class ForecastStoreImplTest {
     @Test
     public void read_unfetchedLocation_completesWithoutSnapshot() {
         // Arrange
-        Maybe<ForecastStore.Snapshot> read = store.read(Location.TOKYO);
+        Maybe<ForecastLocalDataSource.Snapshot> read = store.read(Location.TOKYO);
 
         // Act
-        TestObserver<ForecastStore.Snapshot> observer = read.test();
+        TestObserver<ForecastLocalDataSource.Snapshot> observer = read.test();
 
         // Assert
         observer.awaitDone(5, TimeUnit.SECONDS).assertComplete().assertNoErrors().assertNoValues();
@@ -156,7 +156,7 @@ public class ForecastStoreImplTest {
         observer.awaitDone(5, TimeUnit.SECONDS);
 
         // Assert
-        ForecastStore.Snapshot snapshot = readStored(Location.TOKYO);
+        ForecastLocalDataSource.Snapshot snapshot = readStored(Location.TOKYO);
         observer.assertError(SQLiteException.class).assertNotComplete();
         assertEquals(1, snapshot.forecasts().size());
         assertEquals(16, snapshot.forecasts().get(0).getDate().getDay());
@@ -166,13 +166,13 @@ public class ForecastStoreImplTest {
     @Test
     public void readAndSave_beforeSubscription_doesNotOpenDatabase() {
         // Arrange
-        Maybe<ForecastStore.Snapshot> read = store.read(Location.TOKYO);
+        Maybe<ForecastLocalDataSource.Snapshot> read = store.read(Location.TOKYO);
         Completable save = store.save(Location.TOKYO, Collections.singletonList(forecast(16)), 100);
 
         // Act
         boolean openBeforeSubscription = database.isOpen();
         save.test().awaitDone(5, TimeUnit.SECONDS).assertComplete().assertNoErrors();
-        TestObserver<ForecastStore.Snapshot> observer = read.test();
+        TestObserver<ForecastLocalDataSource.Snapshot> observer = read.test();
         observer.awaitDone(5, TimeUnit.SECONDS).assertComplete().assertNoErrors();
 
         // Assert
@@ -193,7 +193,7 @@ public class ForecastStoreImplTest {
         save.test().awaitDone(5, TimeUnit.SECONDS).assertComplete().assertNoErrors();
 
         // Assert
-        ForecastStore.Snapshot snapshot = readStored(Location.TOKYO);
+        ForecastLocalDataSource.Snapshot snapshot = readStored(Location.TOKYO);
         assertEquals(1, snapshot.forecasts().size());
         assertEquals(16, snapshot.forecasts().get(0).getDate().getDay());
     }
@@ -235,7 +235,7 @@ public class ForecastStoreImplTest {
         awaitQueuedTransactions();
 
         // Assert
-        ForecastStore.Snapshot snapshot = readStored(Location.TOKYO);
+        ForecastLocalDataSource.Snapshot snapshot = readStored(Location.TOKYO);
         assertTrue(observer.isDisposed());
         observer.assertNoErrors().assertNotComplete();
         assertEquals(1, snapshot.forecasts().size());
@@ -249,7 +249,7 @@ public class ForecastStoreImplTest {
 
     private void openDatabase(RoomDatabase.Builder<ForecastDatabase> builder) {
         database = builder.build();
-        store = new ForecastStoreImpl(database);
+        store = new ForecastLocalDataSourceImpl(database);
     }
 
     private void disposeOnForecastDelete(String sql, List<?> bindArgs) {
@@ -278,8 +278,8 @@ public class ForecastStoreImplTest {
         }
     }
 
-    private ForecastStore.Snapshot readStored(Location location) {
-        TestObserver<ForecastStore.Snapshot> observer = store.read(location).test();
+    private ForecastLocalDataSource.Snapshot readStored(Location location) {
+        TestObserver<ForecastLocalDataSource.Snapshot> observer = store.read(location).test();
         observer.awaitDone(5, TimeUnit.SECONDS).assertComplete().assertNoErrors().assertValueCount(1);
         return observer.values().get(0);
     }

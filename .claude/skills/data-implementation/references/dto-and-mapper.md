@@ -5,8 +5,8 @@ API のレスポンス構造を受け取る器（DTO）と、domain のモデル
 ## 確認する対象
 
 - `data/remote/ForecastResponse` の `@Json` フィールドと入れ子クラス（`Temperature`, `Entry`）
-- `data/remote/ForecastMapper` の現在の変換処理
-- 対応する `app/src/test/java/com/example/rxjava/data/remote/ForecastMapperTest`
+- `data/util/RemoteForecastMapper` の現在の変換処理
+- 対応する `app/src/test/java/com/example/rxjava/data/util/RemoteForecastMapperTest`
 
 ## 実装時の注意
 
@@ -14,7 +14,7 @@ API のレスポンス構造を受け取る器（DTO）と、domain のモデル
 - `@Json(name = ...)` はキー名とフィールド名が食い違うときだけ付ける。
   一致しているものにまで付けると、本当に読み替えが要る `temp2m` と `wind10m_max` が埋もれる。
 - 読まれないフィールドを DTO に残さない。JSON にあっても使わないなら書かない。
-- API の語彙を知ってよいのは `ForecastMapper` だけにする。天気コードの文字列や JSON のキー名を
+- API の語彙を知ってよいのは `RemoteForecastMapper` だけにする。天気コードの文字列や JSON のキー名を
   他のクラスへ持ち出さない。
 - `weather` の文字列コードから `WeatherCondition` への対応表はここに持つ。未知のコードと `null` は
   例外にせず `WeatherCondition.UNKNOWN` に落とし、通信自体は成功として扱う。
@@ -34,8 +34,8 @@ API のレスポンス構造を受け取る器（DTO）と、domain のモデル
 
 ## テスト判断
 
-- `ForecastMapper` は Android に依存しないため、変換経路をすべて JVM Unit Test で検証する対象にする。
-  `ForecastMapperTest` を型として、正常系・未知コードの `UNKNOWN` 化・`dataseries` 欠落・
+- `RemoteForecastMapper` は Android に依存しないため、変換経路をすべて JVM Unit Test で検証する対象にする。
+  `RemoteForecastMapperTest` を型として、正常系・未知コードの `UNKNOWN` 化・`dataseries` 欠落・
   壊れた 1 日だけを除外する経路・全件を写せない経路のそれぞれにテストを持たせる。
   全件を写せない経路では、例外の cause に具体的な日別変換例外が残ることも確認する。
 - 範囲外の気温や風速階級のような、値オブジェクト側で検査する境界は `domain-implementation` の

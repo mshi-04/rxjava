@@ -7,7 +7,7 @@ import java.util.List;
 
 import io.reactivex.rxjava3.core.Single;
 
-public interface ForecastDataSource {
+public interface ForecastRemoteDataSource {
 
     Single<List<DailyForecast>> fetch(Location location);
 }

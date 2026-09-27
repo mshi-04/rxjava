@@ -1,10 +1,10 @@
 package com.example.rxjava.di;
 
-import com.example.rxjava.data.local.ForecastStoreImpl;
-import com.example.rxjava.data.datasource.ForecastDataSourceImpl;
-import com.example.rxjava.data.repository.CachingForecastRepository;
-import com.example.rxjava.data.datasource.ForecastDataSource;
-import com.example.rxjava.data.repository.ForecastStore;
+import com.example.rxjava.data.datasource.ForecastLocalDataSourceImpl;
+import com.example.rxjava.data.datasource.ForecastRemoteDataSourceImpl;
+import com.example.rxjava.data.repository.ForecastRepositoryImpl;
+import com.example.rxjava.data.datasource.ForecastRemoteDataSource;
+import com.example.rxjava.data.datasource.ForecastLocalDataSource;
 import com.example.rxjava.data.repository.TimeProvider;
 import com.example.rxjava.domain.repository.ForecastRepository;
 
@@ -22,14 +22,14 @@ public abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract ForecastRepository bindForecastRepository(CachingForecastRepository repository);
+    abstract ForecastRepository bindForecastRepository(ForecastRepositoryImpl repository);
 
     @Binds
-    abstract ForecastDataSource bindForecastDataSource(ForecastDataSourceImpl dataSource);
+    abstract ForecastRemoteDataSource bindForecastDataSource(ForecastRemoteDataSourceImpl dataSource);
 
     @Binds
     @Singleton
-    abstract ForecastStore bindForecastStore(ForecastStoreImpl store);
+    abstract ForecastLocalDataSource bindForecastStore(ForecastLocalDataSourceImpl store);
 
     @Provides
     static TimeProvider provideTimeProvider() {

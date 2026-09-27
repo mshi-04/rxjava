@@ -1,4 +1,4 @@
-package com.example.rxjava.data.local.entity;
+package com.example.rxjava.data.db.entity;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;

@@ -31,7 +31,7 @@ import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava3.RxJava3CallAdapterFactory;
 import retrofit2.converter.moshi.MoshiConverterFactory;
 
-class ForecastDataSourceImplTest {
+class ForecastRemoteDataSourceImplTest {
 
     private static final String FIRST = "{\"date\":20260816,\"weather\":\"lightrain\","
             + "\"temp2m\":{\"max\":26,\"min\":25},\"wind10m_max\":2}";
@@ -39,7 +39,7 @@ class ForecastDataSourceImplTest {
             + "\"temp2m\":{\"max\":32,\"min\":24},\"wind10m_max\":3}";
 
     private MockWebServer server;
-    private ForecastDataSourceImpl dataSource;
+    private ForecastRemoteDataSourceImpl dataSource;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -56,7 +56,7 @@ class ForecastDataSourceImplTest {
                 .addConverterFactory(MoshiConverterFactory.create(new Moshi.Builder().build()))
                 .addCallAdapterFactory(RxJava3CallAdapterFactory.create())
                 .build();
-        dataSource = new ForecastDataSourceImpl(retrofit.create(ForecastApi.class));
+        dataSource = new ForecastRemoteDataSourceImpl(retrofit.create(ForecastApi.class));
     }
 
     @AfterEach

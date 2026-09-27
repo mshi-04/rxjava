@@ -5,7 +5,7 @@ domain が所有し、data が実装する。これで依存が内向きに反�
 ## 確認する対象
 
 - `domain/repository/ForecastRepository` の現在のシグネチャ
-- 実装している `data/repository/CachingForecastRepository`
+- 実装している `data/repository/ForecastRepositoryImpl`
 - 呼び出している `domain/usecase/GetForecastUseCase`
 
 ## 実装時の注意

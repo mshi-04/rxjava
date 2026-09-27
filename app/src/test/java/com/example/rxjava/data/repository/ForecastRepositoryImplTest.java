@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.example.rxjava.data.datasource.ForecastLocalDataSource;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.ForecastDate;
 import com.example.rxjava.domain.model.Location;
@@ -28,18 +29,18 @@ import io.reactivex.rxjava3.observers.TestObserver;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
 import io.reactivex.rxjava3.subjects.MaybeSubject;
 
-class CachingForecastRepositoryTest {
+class ForecastRepositoryImplTest {
 
     private static final long DAY_MILLIS = TimeUnit.HOURS.toMillis(24);
 
-    private final FakeForecastDataSource dataSource = new FakeForecastDataSource();
-    private final FakeForecastStore store = new FakeForecastStore();
+    private final FakeForecastRemoteDataSource dataSource = new FakeForecastRemoteDataSource();
+    private final FakeForecastLocalDataSource store = new FakeForecastLocalDataSource();
     private long now = 100 * DAY_MILLIS;
-    private CachingForecastRepository repository;
+    private ForecastRepositoryImpl repository;
 
     @BeforeEach
     void setUp() {
-        repository = new CachingForecastRepository(dataSource, store, () -> now);
+        repository = new ForecastRepositoryImpl(dataSource, store, () -> now);
     }
 
     @Test
@@ -80,7 +81,7 @@ class CachingForecastRepositoryTest {
     @Test
     void find_freshCache_returnsStoredForecastWithoutFetch() {
         // Arrange
-        store.put(Location.TOKYO, new ForecastStore.Snapshot(Collections.emptyList(), now - (DAY_MILLIS - 1)));
+        store.put(Location.TOKYO, new ForecastLocalDataSource.Snapshot(Collections.emptyList(), now - (DAY_MILLIS - 1)));
 
         // Act
         TestObserver<List<DailyForecast>> observer = repository.find(Location.TOKYO).test();
@@ -95,7 +96,7 @@ class CachingForecastRepositoryTest {
     @Test
     void find_exactly24HoursOld_fetchesAndSaves() {
         // Arrange
-        store.put(Location.TOKYO, new ForecastStore.Snapshot(Collections.emptyList(), now - DAY_MILLIS));
+        store.put(Location.TOKYO, new ForecastLocalDataSource.Snapshot(Collections.emptyList(), now - DAY_MILLIS));
         dataSource.response = Single.just(List.of(forecastOnAugust(16)));
 
         // Act
@@ -111,7 +112,7 @@ class CachingForecastRepositoryTest {
     @Test
     void find_futureTimestamp_fetchesAgain() {
         // Arrange
-        store.put(Location.TOKYO, new ForecastStore.Snapshot(Collections.emptyList(), now + 1));
+        store.put(Location.TOKYO, new ForecastLocalDataSource.Snapshot(Collections.emptyList(), now + 1));
 
         // Act
         repository.find(Location.TOKYO).test().awaitDone(5, TimeUnit.SECONDS).assertComplete();
@@ -123,8 +124,8 @@ class CachingForecastRepositoryTest {
     @Test
     void find_expiredCacheAndFetchFailure_preservesStoredSnapshot() {
         // Arrange
-        ForecastStore.Snapshot previous =
-                new ForecastStore.Snapshot(List.of(forecastOnAugust(15)), now - (DAY_MILLIS + 1));
+        ForecastLocalDataSource.Snapshot previous =
+                new ForecastLocalDataSource.Snapshot(List.of(forecastOnAugust(15)), now - (DAY_MILLIS + 1));
         store.put(Location.TOKYO, previous);
         IOException failure = new IOException("network failed");
         dataSource.response = Single.error(failure);
@@ -164,8 +165,8 @@ class CachingForecastRepositoryTest {
     @Test
     void find_saveFailure_emitsErrorAndPreservesCache() {
         // Arrange
-        ForecastStore.Snapshot previous =
-                new ForecastStore.Snapshot(Collections.emptyList(), now - DAY_MILLIS);
+        ForecastLocalDataSource.Snapshot previous =
+                new ForecastLocalDataSource.Snapshot(Collections.emptyList(), now - DAY_MILLIS);
         store.put(Location.TOKYO, previous);
         store.saveFailure = new IllegalStateException("save failed");
 
@@ -212,7 +213,7 @@ class CachingForecastRepositoryTest {
     @Test
     void find_otherLocation_doesNotUseTokyoCache() {
         // Arrange
-        store.put(Location.TOKYO, new ForecastStore.Snapshot(Collections.emptyList(), now));
+        store.put(Location.TOKYO, new ForecastLocalDataSource.Snapshot(Collections.emptyList(), now));
         Location other = Location.of(34, 135);
         dataSource.response = Single.just(List.of(forecastOnAugust(17)));
 
@@ -363,7 +364,7 @@ class CachingForecastRepositoryTest {
     @Test
     void find_readPending_judgesExpirationWhenReadCompletes() {
         // Arrange
-        MaybeSubject<ForecastStore.Snapshot> read = MaybeSubject.create();
+        MaybeSubject<ForecastLocalDataSource.Snapshot> read = MaybeSubject.create();
         store.readOverride = read;
         long fetchedAtMillis = now;
 
@@ -371,7 +372,7 @@ class CachingForecastRepositoryTest {
         TestObserver<List<DailyForecast>> observer = repository.find(Location.TOKYO).test();
         int fetchesBeforeRead = dataSource.fetches;
         now += DAY_MILLIS;
-        read.onSuccess(new ForecastStore.Snapshot(Collections.emptyList(), fetchedAtMillis));
+        read.onSuccess(new ForecastLocalDataSource.Snapshot(Collections.emptyList(), fetchedAtMillis));
         observer.awaitDone(5, TimeUnit.SECONDS);
 
         // Assert

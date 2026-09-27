@@ -1,12 +1,12 @@
-package com.example.rxjava.data.local;
+package com.example.rxjava.data.db;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.example.rxjava.data.local.entity.ForecastEntity;
-import com.example.rxjava.data.local.entity.LastFetchedAtEntity;
+import com.example.rxjava.data.db.entity.ForecastEntity;
+import com.example.rxjava.data.db.entity.LastFetchedAtEntity;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.ForecastDate;
 import com.example.rxjava.domain.model.Location;

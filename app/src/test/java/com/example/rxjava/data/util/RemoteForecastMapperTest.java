@@ -1,4 +1,4 @@
-package com.example.rxjava.data.remote;
+package com.example.rxjava.data.util;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.example.rxjava.data.remote.ForecastResponse;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.ForecastDate;
 import com.example.rxjava.domain.model.TemperatureRange;
@@ -18,7 +19,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-class ForecastMapperTest {
+class RemoteForecastMapperTest {
 
     @Test
     void toDailyForecasts_multipleEntries_mapsAllInOrder() {
@@ -28,7 +29,7 @@ class ForecastMapperTest {
                 entry(20260817, "clear", 32, 24, 3));
 
         // Act
-        List<DailyForecast> forecasts = ForecastMapper.toDailyForecasts(response);
+        List<DailyForecast> forecasts = RemoteForecastMapper.toDailyForecasts(response);
 
         // Assert
         assertAll(
@@ -43,7 +44,7 @@ class ForecastMapperTest {
         ForecastResponse response = response(entry(20260816, "clear", 30, 20, 2));
 
         // Act
-        ForecastDate date = ForecastMapper.toDailyForecasts(response).get(0).getDate();
+        ForecastDate date = RemoteForecastMapper.toDailyForecasts(response).get(0).getDate();
 
         // Assert
         assertAll(
@@ -58,7 +59,7 @@ class ForecastMapperTest {
         ForecastResponse response = response(entry(20260816, "clear", 26, 25, 2));
 
         // Act
-        DailyForecast forecast = ForecastMapper.toDailyForecasts(response).get(0);
+        DailyForecast forecast = RemoteForecastMapper.toDailyForecasts(response).get(0);
         TemperatureRange range = forecast.getTemperature();
 
         // Assert
@@ -74,7 +75,7 @@ class ForecastMapperTest {
         ForecastResponse response = response(entry(20260816, "meteorshower", 26, 25, 2));
 
         // Act
-        DailyForecast forecast = ForecastMapper.toDailyForecasts(response).get(0);
+        DailyForecast forecast = RemoteForecastMapper.toDailyForecasts(response).get(0);
 
         // Assert
         assertEquals(WeatherCondition.UNKNOWN, forecast.getWeather());
@@ -86,7 +87,7 @@ class ForecastMapperTest {
         ForecastResponse response = response(entry(20260816, null, 26, 25, 2));
 
         // Act
-        DailyForecast forecast = ForecastMapper.toDailyForecasts(response).get(0);
+        DailyForecast forecast = RemoteForecastMapper.toDailyForecasts(response).get(0);
 
         // Assert
         assertEquals(WeatherCondition.UNKNOWN, forecast.getWeather());
@@ -99,7 +100,7 @@ class ForecastMapperTest {
         response.dataseries = Collections.emptyList();
 
         // Act
-        List<DailyForecast> forecasts = ForecastMapper.toDailyForecasts(response);
+        List<DailyForecast> forecasts = RemoteForecastMapper.toDailyForecasts(response);
 
         // Assert
         assertEquals(0, forecasts.size());
@@ -108,7 +109,7 @@ class ForecastMapperTest {
     @Test
     void toDailyForecasts_missingDataseries_throwsIllegalState() {
         // Arrange
-        Executable mapping = () -> ForecastMapper.toDailyForecasts(new ForecastResponse());
+        Executable mapping = () -> RemoteForecastMapper.toDailyForecasts(new ForecastResponse());
 
         // Act & Assert
         assertThrows(IllegalStateException.class, mapping);
@@ -121,7 +122,7 @@ class ForecastMapperTest {
         entry.date = 20260816;
         entry.weather = "clear";
         entry.maxWind = 2;
-        Executable mapping = () -> ForecastMapper.toDailyForecasts(response(entry));
+        Executable mapping = () -> RemoteForecastMapper.toDailyForecasts(response(entry));
 
         // Act & Assert
         assertThrows(IllegalStateException.class, mapping);
@@ -131,7 +132,7 @@ class ForecastMapperTest {
     void toDailyForecasts_windLevelOutOfRange_throwsIllegalState() {
         // Arrange
         Executable mapping = () ->
-                ForecastMapper.toDailyForecasts(response(entry(20260816, "clear", 26, 25, 99)));
+                RemoteForecastMapper.toDailyForecasts(response(entry(20260816, "clear", 26, 25, 99)));
 
         // Act & Assert
         assertThrows(IllegalStateException.class, mapping);
@@ -147,7 +148,7 @@ class ForecastMapperTest {
                 entry(20260818, "cloudy", 30, 24, 3));
 
         // Act
-        List<DailyForecast> forecasts = ForecastMapper.toDailyForecasts(response);
+        List<DailyForecast> forecasts = RemoteForecastMapper.toDailyForecasts(response);
 
         // Assert
         assertAll(
@@ -159,7 +160,7 @@ class ForecastMapperTest {
     @Test
     void toDailyForecasts_everyEntryMalformed_throwsIllegalState() {
         // Arrange
-        Executable mapping = () -> ForecastMapper.toDailyForecasts(response(
+        Executable mapping = () -> RemoteForecastMapper.toDailyForecasts(response(
                 entry(null, "clear", 26, 25, 2),
                 entry(20260816, "clear", 20, 25, 2)));
 
@@ -176,7 +177,7 @@ class ForecastMapperTest {
     void toDailyForecasts_missingDate_throwsIllegalState() {
         // Arrange
         Executable mapping = () ->
-                ForecastMapper.toDailyForecasts(response(entry(null, "clear", 26, 25, 2)));
+                RemoteForecastMapper.toDailyForecasts(response(entry(null, "clear", 26, 25, 2)));
 
         // Act & Assert
         assertThrows(IllegalStateException.class, mapping);
@@ -186,7 +187,7 @@ class ForecastMapperTest {
     void toDailyForecasts_missingWind_throwsIllegalState() {
         // Arrange
         Executable mapping = () ->
-                ForecastMapper.toDailyForecasts(response(entry(20260816, "clear", 26, 25, null)));
+                RemoteForecastMapper.toDailyForecasts(response(entry(20260816, "clear", 26, 25, null)));
 
         // Act & Assert
         assertThrows(IllegalStateException.class, mapping);
@@ -202,7 +203,7 @@ class ForecastMapperTest {
         entry.weather = "clear";
         entry.temperature = temperature;
         entry.maxWind = 2;
-        Executable mapping = () -> ForecastMapper.toDailyForecasts(response(entry));
+        Executable mapping = () -> RemoteForecastMapper.toDailyForecasts(response(entry));
 
         // Act & Assert
         assertThrows(IllegalStateException.class, mapping);
@@ -212,7 +213,7 @@ class ForecastMapperTest {
     void toDailyForecasts_yearOutOfRange_throwsIllegalState() {
         // Arrange
         Executable mapping = () ->
-                ForecastMapper.toDailyForecasts(response(entry(99991231, "clear", 26, 25, 2)));
+                RemoteForecastMapper.toDailyForecasts(response(entry(99991231, "clear", 26, 25, 2)));
 
         // Act & Assert
         assertThrows(IllegalStateException.class, mapping);

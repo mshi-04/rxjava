@@ -1,4 +1,4 @@
-package com.example.rxjava.data.local.dao;
+package com.example.rxjava.data.db.dao;
 
 import androidx.room.Dao;
 import androidx.room.Insert;
@@ -6,8 +6,8 @@ import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 import androidx.room.Transaction;
 
-import com.example.rxjava.data.local.entity.ForecastEntity;
-import com.example.rxjava.data.local.entity.LastFetchedAtEntity;
+import com.example.rxjava.data.db.entity.ForecastEntity;
+import com.example.rxjava.data.db.entity.LastFetchedAtEntity;
 
 import java.util.List;
 

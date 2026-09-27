@@ -24,7 +24,7 @@
 
 ## テスト判断
 
-- 委譲だけの UseCase に単体テストは不要。`ForecastMapper` や Repository 実装側のテストで足りる。
+- 委譲だけの UseCase に単体テストは不要。`RemoteForecastMapper` や Repository 実装側のテストで足りる。
 - 分岐・順序・失敗経路を持たせたときに JVM Unit Test を足す。
 
 ## 検証観点

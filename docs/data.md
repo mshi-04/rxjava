@@ -7,7 +7,7 @@
 
 | import してよい | してはならない |
 | --- | --- |
-| `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp。`local` のみ Room・AndroidX SQLite・AndroidX annotation | Android SDK、その他の AndroidX、RxAndroid、Hilt 固有の型、`presentation` |
+| `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp。`db` と `datasource` のみ Room・AndroidX SQLite・AndroidX annotation | Android SDK、その他の AndroidX、RxAndroid、Hilt 固有の型、`presentation` |
 
 実装クラスはコンストラクタに `@Inject` を付ける。
 インタフェースとの対応は `di/RepositoryModule` の `@Binds` が結ぶ。
@@ -15,7 +15,7 @@
 
 `AndroidSchedulers` は使わない。表示のためのスレッド移送は `presentation` が付ける。
 
-Retrofit と Moshi の型は `remote/` の外へ、Room の Entity は `local/` の外へ出さない。
+Retrofit と Moshi の型は `remote/` の外へ出さない。Room の Entity と DAO は `db/` と `datasource/` の外へ出さない。
 DTO や行の形が Repository の戻り値に現れたら、境界が漏れている。
 package 間の参照の向きは [architecture.md](architecture.md) の「層と依存の向き」にある。
 
@@ -23,19 +23,19 @@ package 間の参照の向きは [architecture.md](architecture.md) の「層と
 
 | クラス | 役割 |
 | --- | --- |
+| `datasource/ForecastRemoteDataSource` | 通信して `domain` のモデルを返す口 |
+| `datasource/ForecastRemoteDataSourceImpl` | `ForecastRemoteDataSource` の実装。通信に写像をつなぐ |
+| `datasource/ForecastLocalDataSource` | 地点ごとの予報と最終取得日時を保存・復元する口 |
+| `datasource/ForecastLocalDataSourceImpl` | `ForecastLocalDataSource` の実装。DAO に Entity の写像をつなぐ |
+| `db/ForecastDatabase` | Room の Database |
+| `db/ForecastEntityMapper` | Entity と `domain` のモデルの相互写像 |
+| `db/dao/ForecastDao` | Room の DAO |
+| `db/entity/ForecastEntity` / `db/entity/LastFetchedAtEntity` | Room の Entity |
 | `remote/ForecastApi` | Retrofit のインタフェース |
 | `remote/ForecastResponse` | API のレスポンス DTO |
-| `remote/ForecastMapper` | DTO から `domain` のモデルへの写像 |
-| `datasource/ForecastDataSource` | 通信して `domain` のモデルを返す口 |
-| `datasource/ForecastDataSourceImpl` | `ForecastDataSource` の実装。通信に写像をつなぐ |
-| `local/entity/ForecastEntity` / `local/entity/LastFetchedAtEntity` | Room の Entity |
-| `local/dao/ForecastDao` | Room の DAO |
-| `local/ForecastDatabase` | Room の Database |
-| `local/ForecastEntityMapper` | Entity と `domain` のモデルの相互写像 |
-| `local/ForecastStoreImpl` | `ForecastStore` の実装 |
-| `repository/ForecastStore` | 地点ごとの予報と最終取得日時を保存・復元する口 |
+| `util/RemoteForecastMapper` | DTO から `domain` のモデルへの写像 |
+| `repository/ForecastRepositoryImpl` | `ForecastRepository` の実装。キャッシュ判定、通信、保存をつなぐ |
 | `repository/TimeProvider` | 現在時刻の取得。テストで差し替える |
-| `repository/CachingForecastRepository` | `ForecastRepository` の実装。キャッシュ判定、通信、保存をつなぐ |
 
 ## 7Timer! との通信
 
@@ -64,11 +64,11 @@ https://www.7timer.info/bin/api.pl?product=civillight&output=json&lat=&lon=
 区別できないと診断が壊れる。`date` の欠落は「月が範囲外: 0」に化け、
 `temp2m` の片方の欠落は「最高気温が最低気温を下回る」に化け、
 `wind10m_max` の欠落は正当な風速階級 0 として画面に出る。
-`ForecastMapper` は `null` を欠落として検知し、何が無いのかを述べる例外にする。
+`RemoteForecastMapper` は `null` を欠落として検知し、何が無いのかを述べる例外にする。
 
 `wind10m_max` は m/s ではなく階級である。単位付きで表示しない。
 
-## ForecastMapper
+## RemoteForecastMapper
 
 DTO から `domain` のモデルへ写す。ここが唯一、API の語彙を知る場所。
 
@@ -100,26 +100,26 @@ DTO から `domain` のモデルへ写す。ここが唯一、API の語彙を�
 `createAsync()` は独自にスレッドを起こし、`presentation` が付けた `subscribeOn` の
 効果が見えなくなる。Scheduler の指定を呼び出し側から追えることを優先する。
 
-## ForecastDataSourceImpl
+## ForecastRemoteDataSourceImpl
 
-`ForecastDataSource.fetch(Location)` を実装する。
-`api.dailyForecast(...)` に `map(ForecastMapper::toDailyForecasts)` をつなぐだけに保ち、
+`ForecastRemoteDataSource.fetch(Location)` を実装する。
+`api.dailyForecast(...)` に `map(RemoteForecastMapper::toDailyForecasts)` をつなぐだけに保ち、
 分岐やキャッシュの知識を持たない。
 地点は `Location` のまま受け取り、呼び出し直前で緯度経度に分解する。
 
 cold であり、購読するまで通信しない。Scheduler も指定しない。
 HTTP・JSON・写像の失敗はそのまま `onError` として上げる。
 
-## CachingForecastRepository
+## ForecastRepositoryImpl
 
 `ForecastRepository.find(Location)` を実装する。
-`ForecastDataSource`・`ForecastStore`・`TimeProvider` だけに依存し、Retrofit も Room も知らない。
+`ForecastRemoteDataSource`・`ForecastLocalDataSource`・`TimeProvider` だけに依存し、Retrofit も Room も知らない。
 
-1. 購読時に `ForecastStore.read` で保存済みの予報を読む
+1. 購読時に `ForecastLocalDataSource.read` で保存済みの予報を読む
 2. 読み取りが完了した時点の現在時刻と最終取得日時を比べ、
    経過時間が 0 以上 24 時間未満なら保存済みの予報を返す
-3. 未取得（`Maybe` の empty）、24 時間以上経過、未来の日時の場合は `ForecastDataSource.fetch` で通信する
-4. 通信と写像が成功したら、保存ストリームの購読直前に現在時刻を取り、`ForecastStore.save` で保存する
+3. 未取得（`Maybe` の empty）、24 時間以上経過、未来の日時の場合は `ForecastRemoteDataSource.fetch` で通信する
+4. 通信と写像が成功したら、保存ストリームの購読直前に現在時刻を取り、`ForecastLocalDataSource.save` で保存する
 5. 保存が完了してから予報を返す
 
 空一覧も、日時があれば取得済みとして扱う。
@@ -131,7 +131,7 @@ HTTP・JSON・写像の失敗はそのまま `onError` として上げる。
 cold であり、購読するまで読み取りも通信もしない。Scheduler も指定しない。
 再購読のたびにキャッシュ判定をやり直す。
 
-## ForecastStore と Room
+## ForecastLocalDataSource と Room
 
 ### 契約
 
@@ -176,8 +176,8 @@ Room-rxjava3 が読み取りを Room の実行基盤へ移す。
 
 保存は DAO の `@Transaction` メソッド `replace` にまとめる。
 対象地点の予報の削除・挿入と日時の更新を 1 つのトランザクションで行う。
-`ForecastStoreImpl` は `Completable.fromAction` でこれを包み、Room の transaction executor 上で実行する。
-この DB 内部の実行指定だけは `local` の責務とし、通信開始と UI 通知は `presentation` が指定する。
+`ForecastLocalDataSourceImpl` は `Completable.fromAction` でこれを包み、Room の transaction executor 上で実行する。
+この DB 内部の実行指定だけは `ForecastLocalDataSourceImpl` の責務とし、通信開始と UI 通知は `presentation` が指定する。
 本番コードで blocking 呼び出しは使わない。
 
 ### 今回は扱わないこと
@@ -191,9 +191,9 @@ Room-rxjava3 が読み取りを Room の実行基盤へ移す。
 
 ## 変更するとき
 
-API を差し替えるときは `ForecastDataSource` の別実装を作り、
+API を差し替えるときは `ForecastRemoteDataSource` の別実装を作り、
 `di/RepositoryModule` の 1 行を変える。キャッシュ判定、`domain`、`presentation` は触らない。
 
-保存先を差し替えるときは `ForecastStore` の別実装を作り、同じく 1 行を変える。
+保存先を差し替えるときは `ForecastLocalDataSource` の別実装を作り、同じく 1 行を変える。
 
-`remote/` の API・DTO・Mapper は `ForecastDataSourceImpl` 専用、`local/` の Entity・DAO・Mapper は `ForecastStoreImpl` 専用であり、他から参照させない。
+`remote/` の API・DTO と `util/` の Mapper は `ForecastRemoteDataSourceImpl` 専用、`db/` の Entity・DAO・Mapper は `ForecastLocalDataSourceImpl` 専用であり、他から参照させない。

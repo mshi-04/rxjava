@@ -41,18 +41,18 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 
 - `ForecastRepository` と `GetForecastUseCase` が返す `Single` が cold か。呼ばれただけで通信が動き出していないか。
 - `subscribeOn` / `observeOn` が presentation（`ForecastViewModel`）以外に現れていないか。
-  例外は `data/local/` が DB 操作を Room の transaction executor へ移す `subscribeOn` だけである。
-- `ForecastDataSource` と `ForecastStore` が返すストリームが cold か。呼ばれただけで通信や DB 操作が動き出していないか。
-- `ForecastStore.save` が一覧を呼び出し時点でコピーし、予報と日時を 1 つのトランザクションで書いているか。
-- 未取得を `null` や空リストで表していないか。`ForecastStore.read` の empty で表す。
+  例外は `ForecastLocalDataSourceImpl` が DB 操作を Room の transaction executor へ移す `subscribeOn` だけである。
+- `ForecastRemoteDataSource` と `ForecastLocalDataSource` が返すストリームが cold か。呼ばれただけで通信や DB 操作が動き出していないか。
+- `ForecastLocalDataSource.save` が一覧を呼び出し時点でコピーし、予報と日時を 1 つのトランザクションで書いているか。
+- 未取得を `null` や空リストで表していないか。`ForecastLocalDataSource.read` の empty で表す。
 - `AndroidSchedulers.mainThread()` が presentation の外に現れていないか。
 - 通信の失敗が `onError` としてそのまま上がっているか。`onErrorReturn` や `try-catch` で
   空リストや `null`、既定値へ握り潰していないか。
 
 ## API の語彙とガード節
 
-- 7Timer! の JSON の項目名や天気コードの文字列が `ForecastMapper` の外へ漏れていないか。
-- Room の Entity が `data/local/` の外へ漏れていないか。天気区分の保存に `name()` / `valueOf()` を使っていないか。
+- 7Timer! の JSON の項目名や天気コードの文字列が `RemoteForecastMapper` の外へ漏れていないか。
+- Room の Entity と DAO が `data/db/` と `data/datasource/` の外へ漏れていないか。天気区分の保存に `name()` / `valueOf()` を使っていないか。
   保存値の不正を `UNKNOWN` に落としていないか。
 - 未知の天気コードが例外にならず `WeatherCondition.UNKNOWN` に落ちているか。
 - `dataseries` のうち写せない 1 日分だけが除外され、利用できる日は返されるか。
@@ -91,7 +91,7 @@ description: 実装差分をレビューする依頼で使う。東京の天気�
 
 ## テストと検証
 
-- 変更した振る舞いのうち、JVM で検証できるもの（`domain` の value object、`ForecastMapper`、
+- 変更した振る舞いのうち、JVM で検証できるもの（`domain` の value object、`RemoteForecastMapper`、
   `ForecastUiState`、`ForecastViewModel` の状態遷移）にテストがあるか。
 - 実ネットワーク呼び出しや `AndroidSchedulers.mainThread()` を伴う経路が、
   JVM Unit Test の対象として誤って扱われていないか。

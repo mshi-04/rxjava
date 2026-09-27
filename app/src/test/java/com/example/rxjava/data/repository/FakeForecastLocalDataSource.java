@@ -1,5 +1,6 @@
 package com.example.rxjava.data.repository;
 
+import com.example.rxjava.data.datasource.ForecastLocalDataSource;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.Location;
 
@@ -10,7 +11,7 @@ import java.util.Map;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 
-final class FakeForecastStore implements ForecastStore {
+final class FakeForecastLocalDataSource implements ForecastLocalDataSource {
 
     private final Map<String, Snapshot> snapshots = new HashMap<>();
     RuntimeException readFailure;

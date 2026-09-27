@@ -62,10 +62,10 @@ Espresso は RxJava のスレッドを知らないため、そのままだと待
 `ObservableBoolean` の値や `Disposable` の状態は検証しない。
 それらは実装の詳細であり、画面から見えるものが契約である。
 
-## ForecastStoreImpl を実際の DB で検証する
+## ForecastLocalDataSourceImpl を実際の DB で検証する
 
 画面ではないが、実際の SQLite を要するためここに置く。
-`ForecastStoreImplTest` はテストごとに一意な名前のファイル DB を作り、終了時に消す。
+`ForecastLocalDataSourceImplTest` はテストごとに一意な名前のファイル DB を作り、終了時に消す。
 ネットワークは使わず、`AndroidJUnit4` ランナーで実行する。
 
 | 対象 | 見るもの |

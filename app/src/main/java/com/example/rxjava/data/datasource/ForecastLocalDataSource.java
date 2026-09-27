@@ -1,4 +1,4 @@
-package com.example.rxjava.data.repository;
+package com.example.rxjava.data.datasource;
 
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.Location;
@@ -11,7 +11,7 @@ import java.util.Objects;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 
-public interface ForecastStore {
+public interface ForecastLocalDataSource {
 
     Maybe<Snapshot> read(Location location);
 

@@ -69,10 +69,12 @@ class ArchitectureTest {
     }
 
     @Test
-    void dataOutsideLocal_doesNotDependOnAndroidX() {
+    void dataOutsideDbAndDatasource_doesNotDependOnAndroidX() {
         // Arrange
         ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data..")
-                .and().resideOutsideOfPackage("com.example.rxjava.data.local..")
+                .and().resideOutsideOfPackages(
+                        "com.example.rxjava.data.db..",
+                        "com.example.rxjava.data.datasource..")
                 .should().dependOnClassesThat().resideInAPackage("androidx..");
 
         // Act
@@ -83,9 +85,11 @@ class ArchitectureTest {
     }
 
     @Test
-    void local_doesNotDependOnUnrelatedAndroidX() {
+    void dbAndDatasource_doNotDependOnUnrelatedAndroidX() {
         // Arrange
-        ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data.local..")
+        ArchRule rule = noClasses().that().resideInAnyPackage(
+                        "com.example.rxjava.data.db..",
+                        "com.example.rxjava.data.datasource..")
                 .should().dependOnClassesThat(resideInAPackage("androidx..")
                         .and(not(resideInAnyPackage(
                                 "androidx.room..", "androidx.sqlite..", "androidx.annotation.."))));
@@ -134,7 +138,7 @@ class ArchitectureTest {
     }
 
     @Test
-    void remoteTypes_outsideDataRemoteDatasourceAndDi_areNotReferenced() {
+    void remoteTypes_outsideRemoteUtilDatasourceAndDi_areNotReferenced() {
         // Arrange
         ArchRule rule = noClasses().that().resideInAnyPackage(
                         "com.example.rxjava.domain..",
@@ -142,6 +146,7 @@ class ArchitectureTest {
                         "com.example.rxjava.presentation..")
                 .and().resideOutsideOfPackages(
                         "com.example.rxjava.data.remote..",
+                        "com.example.rxjava.data.util..",
                         "com.example.rxjava.data.datasource..")
                 .should().dependOnClassesThat().resideInAPackage("com.example.rxjava.data.remote..");
 
@@ -153,14 +158,63 @@ class ArchitectureTest {
     }
 
     @Test
-    void localTypes_outsideDataLocalAndDi_areNotReferenced() {
+    void dbTypes_outsideDbDatasourceAndDi_areNotReferenced() {
         // Arrange
         ArchRule rule = noClasses().that().resideInAnyPackage(
                         "com.example.rxjava.domain..",
                         "com.example.rxjava.data..",
                         "com.example.rxjava.presentation..")
-                .and().resideOutsideOfPackage("com.example.rxjava.data.local..")
-                .should().dependOnClassesThat().resideInAPackage("com.example.rxjava.data.local..");
+                .and().resideOutsideOfPackages(
+                        "com.example.rxjava.data.db..",
+                        "com.example.rxjava.data.datasource..")
+                .should().dependOnClassesThat().resideInAPackage("com.example.rxjava.data.db..");
+
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
+    void utilTypes_outsideUtilAndDatasource_areNotReferenced() {
+        // Arrange
+        ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data..")
+                .and().resideOutsideOfPackages(
+                        "com.example.rxjava.data.util..",
+                        "com.example.rxjava.data.datasource..")
+                .should().dependOnClassesThat().resideInAPackage("com.example.rxjava.data.util..");
+
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
+    void datasourceTypes_outsideDatasourceAndRepository_areNotReferenced() {
+        // Arrange
+        ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data..")
+                .and().resideOutsideOfPackages(
+                        "com.example.rxjava.data.datasource..",
+                        "com.example.rxjava.data.repository..")
+                .should().dependOnClassesThat().resideInAPackage("com.example.rxjava.data.datasource..");
+
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
+    void repositoryTypes_outsideRepository_areNotReferenced() {
+        // Arrange
+        ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data..")
+                .and().resideOutsideOfPackages(
+                        "com.example.rxjava.data.repository..")
+                .should().dependOnClassesThat().resideInAPackage("com.example.rxjava.data.repository..");
 
         // Act
         Executable check = () -> rule.check(PRODUCTION_CLASSES);

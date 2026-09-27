@@ -1,6 +1,7 @@
 package com.example.rxjava.data.repository;
 
-import com.example.rxjava.data.datasource.ForecastDataSource;
+import com.example.rxjava.data.datasource.ForecastLocalDataSource;
+import com.example.rxjava.data.datasource.ForecastRemoteDataSource;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.Location;
 import com.example.rxjava.domain.repository.ForecastRepository;
@@ -13,16 +14,16 @@ import javax.inject.Inject;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 
-public final class CachingForecastRepository implements ForecastRepository {
+public final class ForecastRepositoryImpl implements ForecastRepository {
 
     private static final long CACHE_DURATION_MILLIS = TimeUnit.HOURS.toMillis(24);
 
-    private final ForecastDataSource dataSource;
-    private final ForecastStore store;
+    private final ForecastRemoteDataSource dataSource;
+    private final ForecastLocalDataSource store;
     private final TimeProvider time;
 
     @Inject
-    public CachingForecastRepository(ForecastDataSource dataSource, ForecastStore store, TimeProvider time) {
+    public ForecastRepositoryImpl(ForecastRemoteDataSource dataSource, ForecastLocalDataSource store, TimeProvider time) {
         this.dataSource = dataSource;
         this.store = store;
         this.time = time;
@@ -32,11 +33,11 @@ public final class CachingForecastRepository implements ForecastRepository {
     public Single<List<DailyForecast>> find(Location location) {
         return store.read(location)
                 .filter(this::isFresh)
-                .map(ForecastStore.Snapshot::forecasts)
+                .map(ForecastLocalDataSource.Snapshot::forecasts)
                 .switchIfEmpty(Single.defer(() -> fetchAndSave(location)));
     }
 
-    private boolean isFresh(ForecastStore.Snapshot snapshot) {
+    private boolean isFresh(ForecastLocalDataSource.Snapshot snapshot) {
         long elapsed = time.currentTimeMillis() - snapshot.fetchedAtMillis();
         return elapsed >= 0 && elapsed < CACHE_DURATION_MILLIS;
     }

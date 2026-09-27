@@ -1,4 +1,4 @@
-package com.example.rxjava.data.repository;
+package com.example.rxjava.data.datasource;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,7 +21,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-class ForecastStoreSnapshotTest {
+class ForecastLocalDataSourceSnapshotTest {
 
     @Test
     void Snapshot_sourceListModifiedLater_keepsOriginalForecasts() {
@@ -29,7 +29,7 @@ class ForecastStoreSnapshotTest {
         DailyForecast forecast = clearOnAugust16();
         List<DailyForecast> source = new ArrayList<>();
         source.add(forecast);
-        ForecastStore.Snapshot snapshot = new ForecastStore.Snapshot(source, 0L);
+        ForecastLocalDataSource.Snapshot snapshot = new ForecastLocalDataSource.Snapshot(source, 0L);
 
         // Act
         source.clear();
@@ -46,7 +46,7 @@ class ForecastStoreSnapshotTest {
         List<DailyForecast> forecasts = Arrays.asList(clearOnAugust16(), null);
 
         // Act
-        Executable creation = () -> new ForecastStore.Snapshot(forecasts, 0L);
+        Executable creation = () -> new ForecastLocalDataSource.Snapshot(forecasts, 0L);
 
         // Assert
         assertThrows(NullPointerException.class, creation);
@@ -55,7 +55,7 @@ class ForecastStoreSnapshotTest {
     @Test
     void Snapshot_emptyList_isAccepted() {
         // Act
-        ForecastStore.Snapshot snapshot = new ForecastStore.Snapshot(Collections.emptyList(), 1L);
+        ForecastLocalDataSource.Snapshot snapshot = new ForecastLocalDataSource.Snapshot(Collections.emptyList(), 1L);
 
         // Assert
         assertAll(
@@ -66,8 +66,8 @@ class ForecastStoreSnapshotTest {
     @Test
     void forecasts_modification_throwsUnsupportedOperation() {
         // Arrange
-        ForecastStore.Snapshot snapshot =
-                new ForecastStore.Snapshot(Collections.singletonList(clearOnAugust16()), 0L);
+        ForecastLocalDataSource.Snapshot snapshot =
+                new ForecastLocalDataSource.Snapshot(Collections.singletonList(clearOnAugust16()), 0L);
 
         // Act
         Executable modification = () -> snapshot.forecasts().clear();

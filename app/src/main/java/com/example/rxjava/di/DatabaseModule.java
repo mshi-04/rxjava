@@ -4,7 +4,7 @@ import android.content.Context;
 
 import androidx.room.Room;
 
-import com.example.rxjava.data.local.ForecastDatabase;
+import com.example.rxjava.data.db.ForecastDatabase;
 
 import javax.inject.Singleton;
 

@@ -30,11 +30,11 @@ JUnit 4 は使わない。`org.junit.Test` と `org.junit.Assert` は残って�
 | 対象 | 判断 |
 | --- | --- |
 | `domain` の値オブジェクトと `DailyForecast` | できる |
-| `data` の `ForecastMapper` | できる |
-| `data` の `ForecastDataSourceImpl`（ローカル HTTP サーバーを伴う） | できる。MockWebServer と実際の Retrofit・Moshi・RxJava アダプターを組み合わせる |
-| `data` の `CachingForecastRepository` | できる。手書きの fake の `ForecastDataSource`・`ForecastStore` と可変の時刻を渡す |
-| `data` の `ForecastStore.Snapshot` と `ForecastEntityMapper` | できる |
-| `data` の `ForecastStoreImpl`（実際の DB） | できない。instrumented test で見る |
+| `data` の `RemoteForecastMapper` | できる |
+| `data` の `ForecastRemoteDataSourceImpl`（ローカル HTTP サーバーを伴う） | できる。MockWebServer と実際の Retrofit・Moshi・RxJava アダプターを組み合わせる |
+| `data` の `ForecastRepositoryImpl` | できる。手書きの fake の `ForecastRemoteDataSource`・`ForecastLocalDataSource` と可変の時刻を渡す |
+| `data` の `ForecastLocalDataSource.Snapshot` と `ForecastEntityMapper` | できる |
+| `data` の `ForecastLocalDataSourceImpl`（実際の DB） | できない。instrumented test で見る |
 | `presentation` の `ForecastUiState` | できる |
 | `presentation` の `ForecastViewModel` の状態遷移と購読の破棄 | できる。同期的な遷移には trampoline、スレッド移送と保留中の通知には独立した `TestScheduler` の組を渡す |
 | 層とパッケージの依存方向 | できる。`ArchitectureTest` が ArchUnit で本番クラスだけを読み込んで見る |
@@ -124,7 +124,7 @@ for ループの中で assert しない。
 cold であることを確かめるテストは、購読前後でカウンタが増えないこと・
 増えることを見る。
 
-`ForecastDataSourceImpl` の結合テストは毎回 MockWebServer を起動・終了し、
+`ForecastRemoteDataSourceImpl` の結合テストは毎回 MockWebServer を起動・終了し、
 localhost だけに接続する。Retrofit は本番と同じ `ForecastApi`、Moshi converter、
 `RxJava3CallAdapterFactory.create()` で組み立てる。通信には OkHttp の時間制限を設定し、
 リクエストの取得と `TestObserver` の終了待ちにも上限を付ける。
@@ -139,8 +139,8 @@ URL・固定パラメータ・東京の緯度経度、JSON から domain への�
 
 ## キャッシュ判定の検証
 
-`CachingForecastRepository` は本番と同じコンストラクタで組み立て、
-手書きの fake の `ForecastDataSource`・`ForecastStore` と、テストが進める時刻を渡す。
+`ForecastRepositoryImpl` は本番と同じコンストラクタで組み立て、
+手書きの fake の `ForecastRemoteDataSource`・`ForecastLocalDataSource` と、テストが進める時刻を渡す。
 fake の `read` / `save` / `fetch` も購読時に動く cold なストリームにし、呼び出し回数を数える。
 24 時間は定数に置き、ミリ秒の数値を直書きしない。
 

@@ -1,19 +1,19 @@
 # Repository implementation
 
-`ForecastRepository` の実装 `CachingForecastRepository`。
+`ForecastRepository` の実装 `ForecastRepositoryImpl`。
 キャッシュ判定、通信、保存をつなぐ。Retrofit も Room も知らない。
 
 ## 確認する対象
 
-- `data/repository/CachingForecastRepository` の現在の実装
+- `data/repository/ForecastRepositoryImpl` の現在の実装
 - `domain/repository/ForecastRepository` の契約
-- `data/datasource/ForecastDataSource`、`data/repository/ForecastStore`・`TimeProvider`
-- [`docs/data.md`](../../../../docs/data.md) の「CachingForecastRepository」と「ForecastStore と Room」
+- `data/datasource/ForecastRemoteDataSource`・`ForecastLocalDataSource`、`data/repository/TimeProvider`
+- [`docs/data.md`](../../../../docs/data.md) の「ForecastRepositoryImpl」と「ForecastLocalDataSource と Room」
 
 ## 実装時の注意
 
-- 依存は `ForecastDataSource`・`ForecastStore`・`TimeProvider` だけにする。
-  `ForecastApi`、`ForecastMapper`、Room の型を直接使わない。
+- 依存は `ForecastRemoteDataSource`・`ForecastLocalDataSource`・`TimeProvider` だけにする。
+  `ForecastApi`、`RemoteForecastMapper`、Room の型を直接使わない。
 - 判定は `store.read(...).filter(鮮度).map(...).switchIfEmpty(通信して保存)` の形に保つ。
   未取得は `Maybe` の empty で表し、`null` で分岐しない。
 - 鮮度は「経過時間が 0 以上 24 時間未満」だけで判定する。24 時間は定数に置く。
@@ -24,13 +24,13 @@
 
 ## テスト判断
 
-- JVM Unit Test で検証する。`ForecastDataSource` と `ForecastStore` は手書きの fake、時刻は可変のラムダを渡す。
-  通信の配線は `ForecastDataSourceImpl` 側のテストで押さえ、ここでは MockWebServer を使わない。
+- JVM Unit Test で検証する。`ForecastRemoteDataSource` と `ForecastLocalDataSource` は手書きの fake、時刻は可変のラムダを渡す。
+  通信の配線は `ForecastRemoteDataSourceImpl` 側のテストで押さえ、ここでは MockWebServer を使わない。
 - 観点の一覧は [`docs/unit-test.md`](../../../../docs/unit-test.md) の「キャッシュ判定の検証」を正本とする。
 
 ## 検証観点
 
-- Retrofit や Room の型、`ForecastMapper` を直接参照していないか。
+- Retrofit や Room の型、`RemoteForecastMapper` を直接参照していないか。
 - `subscribeOn` / `observeOn` がこの層に付いていないか。
 - 失敗を握り潰す経路や、古い予報へのフォールバックが増えていないか。
 - 時刻を購読前に取っていないか。

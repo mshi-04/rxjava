@@ -1,6 +1,6 @@
 package com.example.rxjava.data.repository;
 
-import com.example.rxjava.data.datasource.ForecastDataSource;
+import com.example.rxjava.data.datasource.ForecastRemoteDataSource;
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.Location;
 
@@ -9,7 +9,7 @@ import java.util.List;
 
 import io.reactivex.rxjava3.core.Single;
 
-final class FakeForecastDataSource implements ForecastDataSource {
+final class FakeForecastRemoteDataSource implements ForecastRemoteDataSource {
 
     Single<List<DailyForecast>> response = Single.just(Collections.emptyList());
     int fetches;
