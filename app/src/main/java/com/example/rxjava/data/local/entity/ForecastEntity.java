@@ -1,10 +1,11 @@
-package com.example.rxjava.data.local;
+package com.example.rxjava.data.local.entity;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
 
 @Entity(tableName = "forecasts", primaryKeys = {"latitude", "longitude", "position"})
-public final class Forecast {
+public final class ForecastEntity {
+
     public double latitude;
     public double longitude;
     public int position;
@@ -12,7 +13,7 @@ public final class Forecast {
     public int month;
     public int day;
     @NonNull
-    public String weather = "UNKNOWN";
+    public String weather = "";
     public int maxTemperature;
     public int minTemperature;
     public int windLevel;

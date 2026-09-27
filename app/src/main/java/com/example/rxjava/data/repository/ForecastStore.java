@@ -2,19 +2,29 @@ package com.example.rxjava.data.repository;
 
 import com.example.rxjava.domain.model.DailyForecast;
 import com.example.rxjava.domain.model.Location;
-import java.util.List;
+
 import java.util.ArrayList;
 import java.util.Collections;
-import io.reactivex.rxjava3.core.Single;
+import java.util.List;
+import java.util.Objects;
+
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Maybe;
 
 public interface ForecastStore {
-    Single<Snapshot> read(Location location);
-    Completable save(Location location, List<DailyForecast> forecasts, long lastFetchedAt);
 
-    record Snapshot(List<DailyForecast> forecasts, Long lastFetchedAt) {
+    Maybe<Snapshot> read(Location location);
+
+    Completable save(Location location, List<DailyForecast> forecasts, long fetchedAtMillis);
+
+    record Snapshot(List<DailyForecast> forecasts, long fetchedAtMillis) {
+
         public Snapshot {
-            forecasts = Collections.unmodifiableList(new ArrayList<>(forecasts));
+            List<DailyForecast> copy = new ArrayList<>(forecasts);
+            for (DailyForecast forecast : copy) {
+                Objects.requireNonNull(forecast, "予報一覧に null の要素がある");
+            }
+            forecasts = Collections.unmodifiableList(copy);
         }
     }
 }
