@@ -6,6 +6,10 @@ import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
+import static com.example.rxjava.presentation.activity.ForecastUiTestSupport.captureScreen;
+import static com.example.rxjava.presentation.activity.ForecastUiTestSupport.hasForecastCount;
+import static com.example.rxjava.presentation.activity.ForecastUiTestSupport.hasForecastRow;
+import static com.example.rxjava.presentation.activity.ForecastUiTestSupport.scrollToForecast;
 import static org.hamcrest.Matchers.not;
 
 import androidx.test.core.app.ActivityScenario;
@@ -31,6 +35,7 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
@@ -86,7 +91,7 @@ public class ForecastActivityTest {
     }
 
     @Test
-    public void forecastScreen_loadFails_showsErrorAndHidesList() {
+    public void forecastScreen_loadFails_showsErrorAndHidesList() throws IOException {
         // Arrange
         repository.failWith(new IOException("network down"));
 
@@ -98,6 +103,7 @@ public class ForecastActivityTest {
         onView(withText(R.string.forecast_retry)).check(matches(isDisplayed()));
         onView(withId(R.id.forecastList)).check(matches(not(isDisplayed())));
         onView(withId(R.id.loadingIndicator)).check(matches(not(isDisplayed())));
+        captureScreen("failure");
     }
 
     @Test
@@ -114,7 +120,7 @@ public class ForecastActivityTest {
     }
 
     @Test
-    public void forecastScreen_loadIsPending_showsLoadingIndicator() {
+    public void forecastScreen_loadIsPending_showsLoadingIndicator() throws IOException {
         // Arrange
         repository.remainPending();
 
@@ -125,6 +131,7 @@ public class ForecastActivityTest {
         onView(withId(R.id.loadingIndicator)).check(matches(isDisplayed()));
         onView(withId(R.id.forecastList)).check(matches(not(isDisplayed())));
         onView(withId(R.id.errorContainer)).check(matches(not(isDisplayed())));
+        captureScreen("loading");
     }
 
     @Test
@@ -216,11 +223,84 @@ public class ForecastActivityTest {
         onView(withText(R.string.forecast_error_message)).check(matches(not(isDisplayed())));
     }
 
+    @Test
+    public void forecastScreen_sevenDays_scrollsInOrderAndReturnsToFirstRow() throws IOException {
+        // Arrange
+        repository.respondWith(List.of(
+                forecastOnAugustDay(16, WeatherCondition.CLEAR, 30, 21, 0),
+                forecastOnAugustDay(17, WeatherCondition.LIGHT_RAIN, 26, 25, 2),
+                forecastOnAugustDay(18, WeatherCondition.CLOUDY, 23, 18, 4),
+                forecastOnAugustDay(19, WeatherCondition.SNOW, 1, -3, 6),
+                forecastOnAugustDay(20, WeatherCondition.RAIN_SNOW, 3, -1, 8),
+                forecastOnAugustDay(21, WeatherCondition.THUNDERSTORM_WITH_RAIN, 22, 15, 10),
+                forecastOnAugustDay(22, WeatherCondition.UNKNOWN, 20, 12, 12)));
+
+        // Act
+        scenario = ActivityScenario.launch(ForecastActivity.class);
+
+        // Assert
+        onView(withId(R.id.forecastList)).check(matches(isDisplayed())).check(hasForecastCount(7));
+        onView(withId(R.id.forecastList))
+                .check(hasForecastRow(0, "2026年8月16日", "晴れ", 30, 21, 0));
+        captureScreen("success-first");
+        onView(withId(R.id.forecastList)).perform(scrollToForecast(1))
+                .check(hasForecastRow(1, "2026年8月17日", "小雨", 26, 25, 2));
+        onView(withId(R.id.forecastList)).perform(scrollToForecast(2))
+                .check(hasForecastRow(2, "2026年8月18日", "曇り", 23, 18, 4));
+        onView(withId(R.id.forecastList)).perform(scrollToForecast(3))
+                .check(hasForecastRow(3, "2026年8月19日", "雪", 1, -3, 6));
+        onView(withId(R.id.forecastList)).perform(scrollToForecast(4))
+                .check(hasForecastRow(4, "2026年8月20日", "みぞれ", 3, -1, 8));
+        onView(withId(R.id.forecastList)).perform(scrollToForecast(5))
+                .check(hasForecastRow(5, "2026年8月21日", "雷を伴う雨", 22, 15, 10));
+        onView(withId(R.id.forecastList)).perform(scrollToForecast(6))
+                .check(hasForecastRow(6, "2026年8月22日", "不明", 20, 12, 12));
+        captureScreen("success-last");
+        onView(withId(R.id.forecastList)).perform(scrollToForecast(0))
+                .check(hasForecastRow(0, "2026年8月16日", "晴れ", 30, 21, 0));
+        captureScreen("success-returned");
+    }
+
+    @Test
+    public void forecastScreen_unknownWeather_showsUnknownWithRemainingFields() {
+        // Arrange
+        repository.respondWith(Collections.singletonList(
+                forecastOnAugustDay(22, WeatherCondition.UNKNOWN, 20, 12, 12)));
+
+        // Act
+        scenario = ActivityScenario.launch(ForecastActivity.class);
+
+        // Assert
+        onView(withId(R.id.forecastList)).check(hasForecastCount(1))
+                .check(hasForecastRow(0, "2026年8月22日", "不明", 20, 12, 12));
+        onView(withText("不明")).check(matches(isDisplayed()));
+        onView(withId(R.id.errorContainer)).check(matches(not(isDisplayed())));
+    }
+
+    @Test
+    public void forecastScreen_emptySuccess_showsNoRowsLoadingOrError() {
+        // Arrange
+        repository.respondWith(Collections.emptyList());
+
+        // Act
+        scenario = ActivityScenario.launch(ForecastActivity.class);
+
+        // Assert
+        onView(withId(R.id.forecastList)).check(matches(isDisplayed())).check(hasForecastCount(0));
+        onView(withId(R.id.loadingIndicator)).check(matches(not(isDisplayed())));
+        onView(withId(R.id.errorContainer)).check(matches(not(isDisplayed())));
+    }
+
     private static DailyForecast lightRainOnAugust16() {
+        return forecastOnAugustDay(16, WeatherCondition.LIGHT_RAIN, 26, 25, 2);
+    }
+
+    private static DailyForecast forecastOnAugustDay(int day, WeatherCondition weather,
+            int max, int min, int wind) {
         return new DailyForecast(
-                ForecastDate.of(2026, 8, 16),
-                WeatherCondition.LIGHT_RAIN,
-                TemperatureRange.of(Temperature.ofCelsius(26), Temperature.ofCelsius(25)),
-                WindSpeed.ofLevel(2));
+                ForecastDate.of(2026, 8, day),
+                weather,
+                TemperatureRange.of(Temperature.ofCelsius(max), Temperature.ofCelsius(min)),
+                WindSpeed.ofLevel(wind));
     }
 }

@@ -177,6 +177,11 @@ fake 自体の振る舞いを検証するテストは書かない。
 `ArchitectureTest` は [architecture.md](architecture.md) の「層と依存の向き」を写したもので、
 規則の正本はあちらにある。表を変えたらこのテストも合わせて変える。
 
+`domain`・`data` から `di` への依存を禁止し、`domain` が参照する RxJava は
+`io.reactivex.rxjava3.core` に限る。Scheduler・Plugins などを内側へ持ち込んだ変更はテストで落とす。
+これらの検査も生成された Hilt Factory を含む本番クラスに適用するが、
+Factory が使う `dagger.internal` は禁止対象にしない。
+
 ArchUnit は JUnit Jupiter の `@Test` から `ArchRule.check` を呼んで使う。
 `archunit-junit5` の `@ArchTest` は使わず、ほかのテストと同じ AAA と命名に揃える。
 

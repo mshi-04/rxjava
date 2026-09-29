@@ -53,6 +53,10 @@ Espresso は RxJava のスレッドを知らないため、そのままだと待
 | --- | --- |
 | 読み込み中 | 応答が完了しない間、進捗表示が出て一覧とエラー表示が出ない |
 | 成功 | 予報の日付・天気・気温が表示される |
+| 7 日分の成功 | 入力順の 7 行に、日付・天気・最高／最低気温・風速が表示される |
+| スクロールと再表示 | 最終行までスクロールして先頭へ戻っても、行の内容が混ざらない |
+| 未知の天気 | `UNKNOWN` は「不明」と表示され、ほかの項目も表示される |
+| 空の成功結果 | 一覧に予報行がなく、読み込み表示とエラー表示も出ない |
 | 失敗 | エラー文言と再試行ボタンが表示され、一覧が出ない |
 | 再試行 | 失敗表示から再試行を押すと一覧に変わる |
 | Activity 再生成 | 表示を維持し、取得を増やさない |
@@ -61,6 +65,48 @@ Espresso は RxJava のスレッドを知らないため、そのままだと待
 
 `ObservableBoolean` の値や `Disposable` の状態は検証しない。
 それらは実装の詳細であり、画面から見えるものが契約である。
+
+## テーマと文字サイズの検証
+
+ライト／ダークと文字サイズ 100％／200％を組み合わせた 4 条件で画面テストを実行する。
+画面は既存の fake Repository で作り、実 API の可用性に依存させない。
+`RecyclerView` のスクロールはテスト専用の `ViewAction` で行い、Espresso のメインスレッド同期を使う。
+行の位置と、その行に描画された全項目を確認する。固定時間の待機やテスト依存の追加はしない。
+
+通常のテストでは画像を保存しない。検証画像が必要な実行だけ、次の引数を渡す。
+引数は画像の保存名を指定するもので、テーマと文字サイズは変えない。
+検証前に `adb shell cmd uimode night` と `adb shell settings get system font_scale` で元の設定を控え、
+各条件の設定を端末へ適用してからテストする。
+
+| 条件 | `adb shell cmd uimode night` に渡す値 | `adb shell settings put system font_scale` に渡す値 | `uiValidationRun` |
+| --- | --- | --- | --- |
+| ライト・100％ | `no` | `1.0` | `light-100` |
+| ライト・200％ | `no` | `2.0` | `light-200` |
+| ダーク・100％ | `yes` | `1.0` | `dark-100` |
+| ダーク・200％ | `yes` | `2.0` | `dark-200` |
+
+ライト・100％の例:
+
+```bash
+adb shell cmd uimode night no
+adb shell settings put system font_scale 1.0
+./gradlew connectedDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.uiValidationRun=light-100'
+```
+
+`uiValidationRun` の値は条件ごとに `light-100`、`light-200`、`dark-100`、`dark-200` とする。
+成功（先頭・最終行・先頭へ戻った後）、読み込み中、失敗の画面を `UiAutomation.takeScreenshot()` で保存する。
+撮影前は Espresso とメインスレッドの同期に加え、`UiAutomation.waitForIdle(100, 5000)` で
+accessibility イベントが静まるのを最大 5 秒待つ。スクロール直後の未反映フレームを保存しないためで、
+イベントが続いて画面が安定しない場合は画像取得を失敗させる。
+画像は Gradle が runner 引数 `additionalTestOutputDir` で指定する領域の `ui-validation/<条件>/` に置く。
+Gradle がテスト後のアプリ削除前に `app/build/outputs/connected_android_test_additional_output/` へ回収するため、
+実行ごとに画像とテスト結果を `app/build/reports/ui-validation/<条件>/` へコピーして残す。git 管理しない。
+`uiValidationRun` を指定した画像取得は、この回収機構を持つ Gradle の端末テストで実行する。
+
+画像では文字の欠け・重なり、エラー文言、再試行ボタン、ステータスバーの視認性を確認する。
+再試行の操作性は既存の再試行テストでも確認する。エミュレータのテーマと文字サイズは、
+検証前の値を控え、成功・失敗にかかわらず検証後に戻す。
+確認した端末・OS・条件と結果は [development.md](development.md) に記録する。
 
 ## ForecastLocalDataSourceImpl を実際の DB で検証する
 

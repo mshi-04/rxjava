@@ -6,7 +6,7 @@
 
 | import してよい | してはならない |
 | --- | --- |
-| `io.reactivex.rxjava3.core`、`javax.inject`、標準 Java | Android SDK、RxAndroid、Retrofit、Moshi、`data`、`presentation` |
+| `io.reactivex.rxjava3.core`、`javax.inject`、標準 Java | Android SDK、RxJava の `core` 以外、Retrofit、Moshi、`data`、`presentation`、`di` |
 
 RxJava core だけは例外的に許す。
 予報の取得は待ちを伴う操作であり、`Single` という型はこの層の語彙に属する。

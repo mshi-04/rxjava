@@ -7,7 +7,7 @@
 
 | import してよい | してはならない |
 | --- | --- |
-| `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp。`db` と `datasource` のみ Room・AndroidX SQLite・AndroidX annotation | Android SDK、その他の AndroidX、RxAndroid、Hilt 固有の型、`presentation` |
+| `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp。`db` と `datasource` のみ Room・AndroidX SQLite・AndroidX annotation | Android SDK、その他の AndroidX、RxAndroid、Hilt 固有の型、`presentation`、`di` |
 
 実装クラスはコンストラクタに `@Inject` を付ける。
 インタフェースとの対応は `di/RepositoryModule` の `@Binds` が結ぶ。

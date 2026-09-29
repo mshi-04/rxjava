@@ -43,8 +43,8 @@ Clean Architecture の 3 層。`presentation` の内部は MVVM。
 
 | 層 | import してよい | してはならない |
 | --- | --- | --- |
-| `domain` | `io.reactivex.rxjava3.core`、`javax.inject`、標準 Java | Android SDK、RxAndroid、Retrofit、Moshi、`data`、`presentation` |
-| `data` | `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp。`db` と `datasource` のみ Room・AndroidX SQLite・AndroidX annotation | Android SDK、その他の AndroidX、RxAndroid、Hilt の Module 注釈（`@Module` `@Provides` `@Binds`）、`presentation` |
+| `domain` | `io.reactivex.rxjava3.core`、`javax.inject`、標準 Java | Android SDK、RxJava の `core` 以外（Scheduler・Plugins など）、Retrofit、Moshi、`data`、`presentation`、`di` |
+| `data` | `domain`、`javax.inject`、RxJava 全般、Retrofit、Moshi、OkHttp。`db` と `datasource` のみ Room・AndroidX SQLite・AndroidX annotation | Android SDK、その他の AndroidX、RxAndroid、Hilt の Module 注釈（`@Module` `@Provides` `@Binds`）、`presentation`、`di` |
 | `presentation` | `domain`、Android SDK、RxAndroid、DataBinding、Hilt | `data`、Retrofit、Moshi、OkHttp |
 | `di` | すべて | — |
 
@@ -68,6 +68,7 @@ DataSource は provider（Retrofit、Room）を閉じ込める。
 「してはならない」列、`data` 内の境界、Retrofit と Moshi の型を `data/remote/` と `di/` の外へ出さない規則、
 `AndroidSchedulers` を `presentation` の外で使わない規則は
 `app/src/test/java/com/example/rxjava/ArchitectureTest.java` が ArchUnit で検査する。
+`domain`・`data` から組み立てを担当する `di` への参照と、`domain` から RxJava の `core` 以外への参照も検査する。
 Hilt の Module 注釈は生成コードが参照する `dagger.internal` と区別するため、
 package ではなく注釈を対象に検査する。
 正本はこの表で、テストはその写しである。表を変えたらテストも合わせて変える。

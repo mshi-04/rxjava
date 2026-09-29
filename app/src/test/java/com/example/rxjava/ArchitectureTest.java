@@ -53,6 +53,35 @@ class ArchitectureTest {
     }
 
     @Test
+    void domainAndData_doNotDependOnDi() {
+        // Arrange
+        ArchRule rule = noClasses().that().resideInAnyPackage(
+                        "com.example.rxjava.domain..",
+                        "com.example.rxjava.data..")
+                .should().dependOnClassesThat().resideInAPackage("com.example.rxjava.di..");
+
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
+    void domain_doesNotDependOnRxJavaOutsideCore() {
+        // Arrange
+        ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.domain..")
+                .should().dependOnClassesThat(resideInAPackage("io.reactivex.rxjava3..")
+                        .and(not(resideInAPackage("io.reactivex.rxjava3.core.."))));
+
+        // Act
+        Executable check = () -> rule.check(PRODUCTION_CLASSES);
+
+        // Assert
+        assertDoesNotThrow(check);
+    }
+
+    @Test
     void data_doesNotDependOnAndroidOrPresentation() {
         // Arrange
         ArchRule rule = noClasses().that().resideInAPackage("com.example.rxjava.data..")
